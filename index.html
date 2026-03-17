@@ -3,316 +3,149 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>古びた研究室の謎 - スマホゲーム</title>
+    <title>INSIGHT - ひらめきの試練</title>
     <style>
         :root {
-            --bg-color: #1a1a2e;
-            --text-color: #e0e0e0;
-            --accent-color: #00bcd4;
-            --panel-bg: rgba(40, 40, 60, 0.9);
-            --button-color: #5d4037;
-            --button-hover: #795548;
+            --bg: #000000;
+            --main: #ffffff;
+            --accent: #ff3e3e;
         }
 
         body, html {
-            margin: 0;
-            padding: 0;
-            font-family: 'Arial', sans-serif;
-            background-color: var(--bg-color);
-            color: var(--text-color);
-            overflow: hidden; /* スクロールを禁止 */
-            touch-action: manipulation; /* ピンチズームなどを禁止 */
-            -webkit-user-select: none; /* iOS Safariでテキスト選択を禁止 */
-            -moz-user-select: none;
-            -ms-user-select: none;
-            user-select: none;
-            width: 100vw;
-            height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-        }
-
-        #game-container {
-            width: 100%;
-            height: 100%;
-            max-width: 500px; /* スマホの縦幅を意識した最大幅 */
-            max-height: 800px; /* スマホの縦幅を意識した最大高さ */
-            position: relative;
-            background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect x="0" y="0" width="100" height="100" fill="%232c2c4d"/><g stroke="%233e3e6b" stroke-width="0.5"><line x1="0" y1="0" x2="100" y2="100"/><line x1="100" y1="0" x2="0" y2="100"/></g></svg>'); /* 雰囲気の背景 */
-            background-size: cover;
-            background-position: center;
-            border: 2px solid var(--accent-color);
-            box-shadow: 0 0 20px rgba(0, 255, 255, 0.5);
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-            align-items: center;
-            padding: 10px;
-            box-sizing: border-box;
-        }
-
-        #message {
-            font-size: 1.1em;
-            text-align: center;
-            padding: 15px;
-            background: var(--panel-bg);
-            border-radius: 10px;
-            margin-bottom: 10px;
-            min-height: 60px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            box-shadow: 0 0 10px rgba(0, 200, 200, 0.2);
-            width: 90%;
-            max-width: 400px;
-        }
-
-        #game-area {
-            position: relative;
-            width: 95%;
-            flex-grow: 1; /* メッセージと入力フィールドの間を埋める */
-            background-color: rgba(0, 0, 0, 0.3);
-            border-radius: 10px;
+            margin: 0; padding: 0;
+            height: 100vh; width: 100vw;
+            background: var(--bg);
+            color: var(--main);
+            font-family: "Hiragino Sans", "Meiryo", sans-serif;
             overflow: hidden;
             display: flex;
-            justify-content: center;
+            flex-direction: column;
             align-items: center;
-            flex-wrap: wrap;
-            gap: 15px;
+        }
+
+        #screen {
+            width: 100%;
+            max-width: 400px;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
             padding: 20px;
             box-sizing: border-box;
         }
 
-        .object {
-            width: 100px;
-            height: 100px;
-            background-color: var(--button-color);
-            border: 2px solid var(--accent-color);
-            border-radius: 15px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            font-size: 0.9em;
-            text-align: center;
-            cursor: pointer;
-            transition: transform 0.2s, background-color 0.2s;
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
-            flex-shrink: 0;
-            padding: 5px;
-            box-sizing: border-box;
-        }
-
-        .object:hover, .object:active {
-            transform: scale(1.05);
-            background-color: var(--button-hover);
-            box-shadow: 0 6px 15px rgba(0, 255, 255, 0.3);
-        }
-
-        #input-panel {
+        /* 謎のメインエリア */
+        #problem-box {
+            flex: 2;
             display: flex;
             flex-direction: column;
+            justify-content: center;
             align-items: center;
-            padding: 15px;
-            background: var(--panel-bg);
-            border-radius: 10px;
-            width: 90%;
-            max-width: 400px;
-            margin-top: 10px;
-            box-shadow: 0 0 10px rgba(0, 200, 200, 0.2);
+            border: 1px solid #333;
+            margin-top: 20px;
+            position: relative;
+            background: #050505;
         }
 
-        #code-input {
-            width: 80%;
-            padding: 12px;
-            margin-bottom: 15px;
-            font-size: 1.4em;
+        .hint-text {
+            font-size: 1.2rem;
+            margin: 10px 0;
             text-align: center;
-            background-color: #0f0f1c;
-            border: 2px solid var(--accent-color);
-            border-radius: 8px;
-            color: var(--text-color);
-            caret-color: var(--accent-color);
+            letter-spacing: 2px;
         }
 
-        #submit-button {
-            padding: 12px 30px;
-            font-size: 1.2em;
-            background-color: var(--accent-color);
-            color: var(--bg-color);
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            transition: background-color 0.2s, transform 0.2s;
-            font-weight: bold;
+        /* ギミック：逆さまの文字 */
+        .upside-down {
+            transform: rotate(180deg);
+            display: inline-block;
         }
 
-        #submit-button:hover, #submit-button:active {
-            background-color: #00e5ff;
-            transform: scale(1.02);
-        }
-
-        #win-screen {
-            position: absolute;
-            top: 0;
-            left: 0;
+        /* 入力エリア */
+        #answer-section {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
             width: 100%;
-            height: 100%;
-            background-color: rgba(0, 0, 0, 0.95);
-            display: none; /* 初期状態では非表示 */
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            color: #00ff00;
-            font-size: 2em;
-            text-align: center;
-            z-index: 100;
         }
 
-        #win-screen h2 {
-            font-size: 3em;
-            color: var(--accent-color);
-            margin-bottom: 20px;
-            text-shadow: 0 0 15px var(--accent-color);
-        }
-
-        #win-screen p {
-            margin-bottom: 30px;
-            font-size: 1.5em;
-        }
-
-        #reset-button {
-            padding: 15px 40px;
-            font-size: 1.3em;
-            background-color: var(--accent-color);
-            color: var(--bg-color);
+        input {
+            background: transparent;
             border: none;
-            border-radius: 10px;
-            cursor: pointer;
-            transition: background-color 0.2s, transform 0.2s;
-            font-weight: bold;
+            border-bottom: 2px solid #555;
+            color: #fff;
+            font-size: 2rem;
+            text-align: center;
+            outline: none;
+            margin-bottom: 20px;
         }
 
-        #reset-button:hover, #reset-button:active {
-            background-color: #00e5ff;
-            transform: scale(1.05);
+        input:focus { border-bottom-color: var(--accent); }
+
+        button {
+            background: var(--main);
+            color: var(--bg);
+            border: none;
+            padding: 15px;
+            font-weight: bold;
+            letter-spacing: 5px;
+            cursor: pointer;
+        }
+
+        /* 隠し要素 */
+        .hidden-hint {
+            position: absolute;
+            bottom: 5px;
+            right: 10px;
+            font-size: 0.6rem;
+            color: #222; /* ほぼ見えない */
+        }
+
+        /* クリア演出 */
+        #clear-layer {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: var(--main); color: var(--bg);
+            display: none; flex-direction: column;
+            justify-content: center; align-items: center;
+            z-index: 100;
         }
     </style>
 </head>
 <body>
 
-    <div id="game-container">
-        <div id="message">
-            古びた研究室の奥。薄暗いデスクに置かれた「奇妙なメモ」と「ロックされた箱」がある。
+    <div id="screen">
+        <div style="font-size: 0.7rem; color: #666;">PHASE: CLAIRVOYANCE</div>
+        
+        <div id="problem-box">
+            <div class="hint-text">11 = 2</div>
+            <div class="hint-text">12 = 3</div>
+            <div class="hint-text">20 = 1</div>
+            <div class="hint-text" style="color: var(--accent);">55 = ?</div>
+            
+            <div class="hidden-hint">答えは画面の外にはない。</div>
         </div>
 
-        <div id="game-area">
-            <div id="memo" class="object">奇妙なメモ</div>
-            <div id="book" class="object">分厚い本</div>
-            <div id="picture" class="object">色あせた写真</div>
-        </div>
-
-        <div id="input-panel">
-            <input type="text" id="code-input" placeholder="コードを入力">
-            <button id="submit-button">解除する</button>
-        </div>
-
-        <div id="win-screen">
-            <h2>CLEAR!</h2>
-            <p>見事、謎を解き明かしました！</p>
-            <button id="reset-button">もう一度プレイ</button>
+        <div id="answer-section">
+            <input type="number" id="input" placeholder="???" pattern="\d*">
+            <button onclick="check()">UNLOCK</button>
         </div>
     </div>
 
+    <div id="clear-layer">
+        <h1>GENIUS</h1>
+        <p>あなたのひらめきは本物だ。</p>
+        <button onclick="location.reload()" style="background:#000; color:#fff; margin-top:20px;">NEXT STAGE</button>
+    </div>
+
     <script>
-        // ゲームの状態変数
-        let currentMessage = "古びた研究室の奥。薄暗いデスクに置かれた「奇妙なメモ」と「ロックされた箱」がある。";
-        const correctCode = "4728"; // 正解のコード
-        let hintsFound = {
-            memo: false,
-            book: false,
-            picture: false
-        };
-
-        // DOM要素の取得
-        const messageDisplay = document.getElementById('message');
-        const memoObject = document.getElementById('memo');
-        const bookObject = document.getElementById('book');
-        const pictureObject = document.getElementById('picture');
-        const codeInput = document.getElementById('code-input');
-        const submitButton = document.getElementById('submit-button');
-        const winScreen = document.getElementById('win-screen');
-        const resetButton = document.getElementById('reset-button');
-
-        // メッセージ表示関数
-        function showMessage(msg) {
-            currentMessage = msg;
-            messageDisplay.textContent = msg;
-        }
-
-        // オブジェクトクリックイベント
-        memoObject.addEventListener('click', () => {
-            if (!hintsFound.memo) {
-                showMessage("「奇妙なメモ」には、こう書かれている。『数字は空に舞い、過去を紡ぐ』");
-                hintsFound.memo = true;
-            } else {
-                showMessage("メモは依然としてそこにある。『数字は空に舞い、過去を紡ぐ』");
-            }
-        });
-
-        bookObject.addEventListener('click', () => {
-            if (!hintsFound.book) {
-                showMessage("「分厚い本」を開くと、しおりが挟まっていた。日付は『7月28日』。");
-                hintsFound.book = true;
-            } else {
-                showMessage("本のしおりには『7月28日』。");
-            }
-        });
-
-        pictureObject.addEventListener('click', () => {
-            if (!hintsFound.picture) {
-                showMessage("「色あせた写真」の裏に、かすれた文字。『あの夏、4人で』。");
-                hintsFound.picture = true;
-            } else {
-                showMessage("写真の裏には『あの夏、4人で』。");
-            }
-        });
-
-        // コード入力と解除ボタン
-        submitButton.addEventListener('click', () => {
-            const enteredCode = codeInput.value.trim();
-            if (enteredCode === correctCode) {
-                winScreen.style.display = 'flex'; // 勝利画面を表示
-            } else {
-                showMessage("コードが違うようだ... もう一度ヒントをよく見てみよう。");
-                codeInput.value = ''; // 入力欄をクリア
-            }
-        });
-
-        // リセットボタン
-        resetButton.addEventListener('click', () => {
-            winScreen.style.display = 'none'; // 勝利画面を非表示
-            showMessage("古びた研究室の奥。薄暗いデスクに置かれた「奇妙なメモ」と「ロックされた箱」がある。");
-            codeInput.value = '';
-            hintsFound = {
-                memo: false,
-                book: false,
-                picture: false
-            };
-        });
-
-        // 初期メッセージ表示
-        showMessage(currentMessage);
-
-        // キーボード操作で誤ってコードが入力されないように
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter' && document.activeElement === codeInput) {
-                submitButton.click();
-            }
-        });
-
-        // スマートフォンでのタップ反応を良くするため
-        document.addEventListener('touchstart', function() {}, true);
-    </script>
-</body>
-</html>
+        function check() {
+            const val = document.getElementById('input').value;
+            
+            // 正解: 0
+            // 解説: 
+            // この謎は計算ではありません。
+            // 「数字に含まれる『○（丸）』の数」を数えるひらめき問題です。
+            // 11 (丸なし) = 0 
+            // ...と思いきや、この問題にはもう一つ「ひらめき」があります。
+            // ヒントの「11=2」を見てください。1という棒が2本あるから「2」。
+            // つまり「画数（線と点の数）」、あるいはもっと単純に「使われている部品の数」です。
+            // しかし、本当の正解は...
