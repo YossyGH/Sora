@@ -3,116 +3,132 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>INSIGHT - ヒント機能搭載</title>
+    <title>DIGITAL ESCAPE - 思考の迷宮</title>
     <style>
         :root {
-            --bg: #050505;
-            --main: #ffffff;
-            --accent: #00ff88;
-            --hint-bg: #1a1a1a;
+            --bg: #0d1117;
+            --panel: #161b22;
+            --accent: #58a6ff;
+            --text: #c9d1d9;
+            --highlight: #f0883e;
         }
 
         body, html {
             margin: 0; padding: 0;
             height: 100vh; width: 100vw;
             background: var(--bg);
-            color: var(--main);
-            font-family: "Hiragino Sans", sans-serif;
+            color: var(--text);
+            font-family: "Segoe UI", sans-serif;
             overflow: hidden;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
         }
 
-        #screen {
-            width: 100%;
-            max-width: 400px;
+        /* メインコンテナ */
+        #game-screen {
+            max-width: 500px;
             height: 100%;
+            margin: 0 auto;
             display: flex;
             flex-direction: column;
             padding: 20px;
             box-sizing: border-box;
         }
 
-        #problem-box {
-            flex: 1.5;
+        /* 状況説明エリア */
+        #log-window {
+            height: 120px;
+            background: var(--panel);
+            border: 1px solid #30363d;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+            font-size: 0.9rem;
+            line-height: 1.5;
+            overflow-y: auto;
+        }
+
+        /* 探索エリア（脱出ゲーム要素） */
+        #room-view {
+            flex: 2;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+
+        .object {
+            background: #21262d;
+            border: 1px solid #30363d;
+            border-radius: 12px;
             display: flex;
             flex-direction: column;
             justify-content: center;
             align-items: center;
-            border: 1px solid #333;
-            margin-top: 20px;
-            background: #000;
-            border-radius: 15px;
-        }
-
-        .hint-text {
-            font-size: 1.5rem;
-            margin: 10px 0;
-            letter-spacing: 3px;
-        }
-
-        /* ヒントエリア */
-        #hint-section {
-            flex: 1;
-            width: 100%;
-            margin-top: 15px;
-            font-size: 0.85rem;
-        }
-
-        .hint-btn {
-            background: #333;
-            color: #ccc;
-            border: none;
-            padding: 8px 15px;
-            border-radius: 5px;
             cursor: pointer;
-            margin-bottom: 10px;
-            width: 100%;
-            text-align: left;
+            transition: 0.2s;
+            text-align: center;
+            padding: 10px;
         }
 
-        .hint-content {
-            background: var(--hint-bg);
-            padding: 10px;
-            border-left: 3px solid var(--accent);
-            display: none; /* 初期は非表示 */
-            margin-bottom: 10px;
-            color: #aaa;
-        }
+        .object:active { transform: scale(0.95); background: #30363d; }
+        .object span { font-size: 2rem; margin-bottom: 5px; }
 
         /* 入力エリア */
-        #answer-section {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
+        #input-area {
+            background: var(--panel);
+            padding: 20px;
+            border-radius: 12px;
+            text-align: center;
         }
 
         input {
+            width: 80%;
             background: transparent;
             border: none;
-            border-bottom: 2px solid #555;
+            border-bottom: 2px solid var(--accent);
             color: #fff;
-            font-size: 2rem;
+            font-size: 1.8rem;
             text-align: center;
+            letter-spacing: 8px;
             outline: none;
             margin-bottom: 15px;
         }
 
-        button#unlock-btn {
-            background: var(--main);
-            color: #000;
-            border: none;
-            padding: 12px;
-            font-weight: bold;
-            border-radius: 5px;
+        /* ヒントボタン（確実に動くように修正） */
+        .hint-toggle {
+            background: none;
+            border: 1px solid #30363d;
+            color: #8b949e;
+            padding: 5px 10px;
+            font-size: 0.7rem;
+            border-radius: 4px;
             cursor: pointer;
+            margin-top: 10px;
         }
 
-        #clear-layer {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: var(--accent); color: #000;
+        #hint-content {
+            display: none; /* 初期は非表示 */
+            background: rgba(88, 166, 255, 0.1);
+            color: var(--accent);
+            padding: 10px;
+            margin-top: 10px;
+            font-size: 0.8rem;
+            border-radius: 4px;
+        }
+
+        button#submit-btn {
+            background: var(--accent);
+            color: #fff;
+            border: none;
+            padding: 10px 30px;
+            font-weight: bold;
+            border-radius: 6px;
+            width: 100%;
+        }
+
+        /* クリア画面 */
+        #overlay {
+            position: fixed; top:0; left:0; width:100%; height:100%;
+            background: var(--bg);
             display: none; flex-direction: column;
             justify-content: center; align-items: center;
             z-index: 100;
@@ -121,39 +137,86 @@
 </head>
 <body>
 
-    <div id="screen">
-        <div id="problem-box">
-            <div class="hint-text">11 = 2</div>
-            <div class="hint-text">12 = 3</div>
-            <div class="hint-text">20 = 1</div>
-            <div class="hint-text" style="color: var(--accent);">55 = ?</div>
-        </div>
-
-        <div id="hint-section">
-            <button class="hint-btn" onclick="toggleHint('h1')">💡 ヒント1を見る</button>
-            <div id="h1" class="hint-content">最初の2つ（11と12）だけを見ると「足し算」に見えますが、「20=1」がそのルールを壊しています。</div>
-
-            <button class="hint-btn" onclick="toggleHint('h2')">💡 ヒント2を見る</button>
-            <div id="h2" class="hint-content">中学生で習う「指数」の書き方を思い出して。20は「2の0乗」...つまり 2<sup>0</sup> です。</div>
-        </div>
-
-        <div id="answer-section">
-            <input type="number" id="input" placeholder="00" pattern="\d*">
-            <button id="unlock-btn" onclick="check()">UNLOCK</button>
-        </div>
+<div id="game-screen">
+    <div id="log-window">
+        ここは電子の牢獄。出口には4桁のロックがかかっている。<br>周囲を調べ、脱出の手がかり（Password）を探せ。
     </div>
 
-    <div id="clear-layer">
-        <h1>SUCCESS</h1>
-        <p>5 + 5 = 10</p>
-        <button onclick="location.reload()" style="background:#000; color:#fff; border:none; padding:10px 20px; margin-top:20px;">RETRY</button>
+    <div id="room-view">
+        <div class="object" onclick="tapObj('pc')"><span>💻</span>端末を見る</div>
+        <div class="object" onclick="tapObj('trash')"><span>🗑️</span>ゴミ箱</div>
+        <div class="object" onclick="tapObj('calendar')"><span>📅</span>カレンダー</div>
+        <div class="object" onclick="tapObj('poster')"><span>🖼️</span>ポスター</div>
     </div>
 
-    <script>
-        function toggleHint(id) {
-            const el = document.getElementById(id);
-            el.style.display = (el.style.display === 'block') ? 'none' : 'block';
+    <div id="input-area">
+        <input type="number" id="pass-input" placeholder="0000" maxlength="4">
+        <button id="submit-btn" onclick="checkClear()">SYSTEM UNLOCK</button>
+        
+        <button class="hint-toggle" onclick="showHint()">HINT を表示</button>
+        <div id="hint-content"></div>
+    </div>
+</div>
+
+<div id="overlay">
+    <h1 style="color:var(--accent)">ACCESS GRANTED</h1>
+    <p>脱出成功！あなたの知能はシステムを超えた。</p>
+    <button onclick="location.reload()" style="background:#30363d; color:#fff; border:none; padding:10px 20px; border-radius:5px;">再挑戦</button>
+</div>
+
+<script>
+    let state = {
+        pcChecked: false,
+        trashChecked: false,
+        hintStep: 0
+    };
+
+    function tapObj(id) {
+        const log = document.getElementById('log-window');
+        if (id === 'pc') {
+            log.innerHTML = "端末にはエラー画面：<br><span style='color:var(--highlight)'>『答えは「十」の向こう側にある。』</span>";
+            state.pcChecked = true;
+        } else if (id === 'trash') {
+            log.innerHTML = "くしゃくしゃのメモを見つけた：<br>「11=2, 12=3, 20=1, 55=？」";
+            state.trashChecked = true;
+        } else if (id === 'calendar') {
+            log.innerHTML = "3月のカレンダーだ。なぜか<span style='color:var(--accent)'>「10日」</span>だけに丸がついている。";
+        } else if (id === 'poster') {
+            log.innerHTML = "ポスターには数式が並んでいる：<br>『Xの0乗は常に1である。』";
         }
+    }
 
-        function check() {
-            const val = document.getElementById('input
+    // ヒントボタンの動作（確実に切り替わるように記述）
+    function showHint() {
+        const hContent = document.getElementById('hint-content');
+        hContent.style.display = 'block'; // 表示にする
+
+        if (state.hintStep === 0) {
+            hContent.innerText = "ヒント1：ゴミ箱のメモ「11=2, 12=3」は単純な足し算に見えますが…？";
+            state.hintStep = 1;
+        } else if (state.hintStep === 1) {
+            hContent.innerText = "ヒント2：ポスターの「0乗は1」と、メモの「20=1」を組み合わせて考えてみて。";
+            state.hintStep = 2;
+        } else {
+            hContent.innerText = "最終ヒント：端末の「十の向こう側」とは、5+5の答えを指しています。";
+        }
+    }
+
+    function checkClear() {
+        const val = document.getElementById('pass-input').value;
+        // 正解は「1010」
+        // 解説：
+        // 55の答えは「10」（5+5）。
+        // カレンダーの「10日」も強調されている。
+        // つまり、この世界のキーワードは「10」。
+        // ロックは4桁なので、10を2回重ねた「1010」が正解。
+        if (val === "1010") {
+            document.getElementById('overlay').style.display = 'flex';
+        } else {
+            const log = document.getElementById('log-window');
+            log.innerHTML = "<span style='color:red'>パスワードが違います。</span><br>全ての場所を調査しましたか？";
+        }
+    }
+</script>
+</body>
+</html>
