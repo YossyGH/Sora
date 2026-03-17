@@ -3,12 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>INSIGHT - ひらめきの試練</title>
+    <title>INSIGHT - ヒント機能搭載</title>
     <style>
         :root {
-            --bg: #000000;
+            --bg: #050505;
             --main: #ffffff;
-            --accent: #ff3e3e;
+            --accent: #00ff88;
+            --hint-bg: #1a1a1a;
         }
 
         body, html {
@@ -16,7 +17,7 @@
             height: 100vh; width: 100vw;
             background: var(--bg);
             color: var(--main);
-            font-family: "Hiragino Sans", "Meiryo", sans-serif;
+            font-family: "Hiragino Sans", sans-serif;
             overflow: hidden;
             display: flex;
             flex-direction: column;
@@ -33,30 +34,51 @@
             box-sizing: border-box;
         }
 
-        /* 謎のメインエリア */
         #problem-box {
-            flex: 2;
+            flex: 1.5;
             display: flex;
             flex-direction: column;
             justify-content: center;
             align-items: center;
             border: 1px solid #333;
             margin-top: 20px;
-            position: relative;
-            background: #050505;
+            background: #000;
+            border-radius: 15px;
         }
 
         .hint-text {
-            font-size: 1.2rem;
+            font-size: 1.5rem;
             margin: 10px 0;
-            text-align: center;
-            letter-spacing: 2px;
+            letter-spacing: 3px;
         }
 
-        /* ギミック：逆さまの文字 */
-        .upside-down {
-            transform: rotate(180deg);
-            display: inline-block;
+        /* ヒントエリア */
+        #hint-section {
+            flex: 1;
+            width: 100%;
+            margin-top: 15px;
+            font-size: 0.85rem;
+        }
+
+        .hint-btn {
+            background: #333;
+            color: #ccc;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-bottom: 10px;
+            width: 100%;
+            text-align: left;
+        }
+
+        .hint-content {
+            background: var(--hint-bg);
+            padding: 10px;
+            border-left: 3px solid var(--accent);
+            display: none; /* 初期は非表示 */
+            margin-bottom: 10px;
+            color: #aaa;
         }
 
         /* 入力エリア */
@@ -65,7 +87,6 @@
             display: flex;
             flex-direction: column;
             justify-content: center;
-            width: 100%;
         }
 
         input {
@@ -76,34 +97,22 @@
             font-size: 2rem;
             text-align: center;
             outline: none;
-            margin-bottom: 20px;
+            margin-bottom: 15px;
         }
 
-        input:focus { border-bottom-color: var(--accent); }
-
-        button {
+        button#unlock-btn {
             background: var(--main);
-            color: var(--bg);
+            color: #000;
             border: none;
-            padding: 15px;
+            padding: 12px;
             font-weight: bold;
-            letter-spacing: 5px;
+            border-radius: 5px;
             cursor: pointer;
         }
 
-        /* 隠し要素 */
-        .hidden-hint {
-            position: absolute;
-            bottom: 5px;
-            right: 10px;
-            font-size: 0.6rem;
-            color: #222; /* ほぼ見えない */
-        }
-
-        /* クリア演出 */
         #clear-layer {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: var(--main); color: var(--bg);
+            background: var(--accent); color: #000;
             display: none; flex-direction: column;
             justify-content: center; align-items: center;
             z-index: 100;
@@ -113,39 +122,38 @@
 <body>
 
     <div id="screen">
-        <div style="font-size: 0.7rem; color: #666;">PHASE: CLAIRVOYANCE</div>
-        
         <div id="problem-box">
             <div class="hint-text">11 = 2</div>
             <div class="hint-text">12 = 3</div>
             <div class="hint-text">20 = 1</div>
             <div class="hint-text" style="color: var(--accent);">55 = ?</div>
-            
-            <div class="hidden-hint">答えは画面の外にはない。</div>
+        </div>
+
+        <div id="hint-section">
+            <button class="hint-btn" onclick="toggleHint('h1')">💡 ヒント1を見る</button>
+            <div id="h1" class="hint-content">最初の2つ（11と12）だけを見ると「足し算」に見えますが、「20=1」がそのルールを壊しています。</div>
+
+            <button class="hint-btn" onclick="toggleHint('h2')">💡 ヒント2を見る</button>
+            <div id="h2" class="hint-content">中学生で習う「指数」の書き方を思い出して。20は「2の0乗」...つまり 2<sup>0</sup> です。</div>
         </div>
 
         <div id="answer-section">
-            <input type="number" id="input" placeholder="???" pattern="\d*">
-            <button onclick="check()">UNLOCK</button>
+            <input type="number" id="input" placeholder="00" pattern="\d*">
+            <button id="unlock-btn" onclick="check()">UNLOCK</button>
         </div>
     </div>
 
     <div id="clear-layer">
-        <h1>GENIUS</h1>
-        <p>あなたのひらめきは本物だ。</p>
-        <button onclick="location.reload()" style="background:#000; color:#fff; margin-top:20px;">NEXT STAGE</button>
+        <h1>SUCCESS</h1>
+        <p>5 + 5 = 10</p>
+        <button onclick="location.reload()" style="background:#000; color:#fff; border:none; padding:10px 20px; margin-top:20px;">RETRY</button>
     </div>
 
     <script>
+        function toggleHint(id) {
+            const el = document.getElementById(id);
+            el.style.display = (el.style.display === 'block') ? 'none' : 'block';
+        }
+
         function check() {
-            const val = document.getElementById('input').value;
-            
-            // 正解: 0
-            // 解説: 
-            // この謎は計算ではありません。
-            // 「数字に含まれる『○（丸）』の数」を数えるひらめき問題です。
-            // 11 (丸なし) = 0 
-            // ...と思いきや、この問題にはもう一つ「ひらめき」があります。
-            // ヒントの「11=2」を見てください。1という棒が2本あるから「2」。
-            // つまり「画数（線と点の数）」、あるいはもっと単純に「使われている部品の数」です。
-            // しかし、本当の正解は...
+            const val = document.getElementById('input
