@@ -2,198 +2,164 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Escape Room - 修正版</title>
+    <title>3D Escape Room</title>
     <style>
-        /* 基本スタイル：真っ暗にならないよう背景を調整 */
-        body {
-            margin: 0;
-            padding: 0;
-            background-color: #1a1a1a; /* 真っ黒すぎないグレー */
-            color: #ffffff;
-            font-family: 'Segoe UI', Meiryo, sans-serif;
+        body { margin: 0; overflow: hidden; font-family: sans-serif; }
+        canvas { display: block; }
+        
+        /* UIレイヤー */
+        #ui-layer {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none; /* 下のCanvasをクリック可能に */
             display: flex;
-            justify-content: center;
+            flex-direction: column;
+            justify-content: space-between;
             align-items: center;
-            height: 100vh;
-            overflow: hidden;
+            color: white;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
         }
 
-        #game-box {
-            width: 90%;
-            max-width: 500px;
-            background-color: #2c3e50;
-            border: 4px solid #ecf0f1;
-            border-radius: 15px;
+        .hud {
+            pointer-events: auto;
+            background: rgba(0,0,0,0.6);
             padding: 20px;
-            box-shadow: 0 0 20px rgba(0,0,0,0.8);
+            margin: 20px;
+            border-radius: 10px;
             text-align: center;
+            max-width: 80%;
         }
 
-        /* 画面切り替え用 */
-        .screen { display: none; }
-        .active { display: block; animation: fadeIn 0.5s; }
-
-        @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
-        }
-
-        h1 { color: #f1c40f; margin-top: 0; }
-
-        .msg-area {
-            background: rgba(0,0,0,0.3);
-            padding: 15px;
-            border-radius: 8px;
-            margin: 15px 0;
-            min-height: 60px;
-            line-height: 1.5;
-        }
-
-        .inv-slot {
-            display: inline-block;
-            width: 50px;
-            height: 50px;
-            border: 2px dashed #bdc3c7;
-            margin: 5px;
-            line-height: 50px;
-            font-size: 24px;
-            background: #34495e;
-        }
-
-        .btn-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
+        .inventory {
+            display: flex;
             gap: 10px;
+            margin-top: 10px;
+        }
+
+        .slot {
+            width: 50px; height: 50px; border: 1px solid white;
+            display: flex; align-items: center; justify-content: center; font-size: 24px;
+        }
+
+        #crosshair {
+            position: absolute;
+            top: 50%; left: 50%;
+            width: 10px; height: 10px;
+            border: 2px solid white;
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
         }
 
         button {
-            padding: 12px;
-            cursor: pointer;
-            background: #3498db;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            font-size: 14px;
-            font-weight: bold;
+            padding: 10px 20px; font-size: 16px; cursor: pointer;
+            background: #e74c3c; color: white; border: none; border-radius: 5px;
         }
 
-        button:hover { background: #2980b9; }
-
-        input {
-            width: 80%;
-            padding: 10px;
-            font-size: 20px;
-            margin-bottom: 10px;
-            border-radius: 5px;
-            border: none;
-            text-align: center;
+        /* 暗号入力モーダル */
+        #numpad {
+            display: none;
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            background: #2c3e50;
+            padding: 20px;
+            border-radius: 10px;
+            pointer-events: auto;
         }
     </style>
 </head>
 <body>
 
-<div id="game-box">
-    <div id="sc-start" class="screen active">
-        <h1>THE STUDY</h1>
-        <p>静かな書斎に閉じ込められた...</p>
-        <button onclick="go('room')">探索を開始する</button>
-    </div>
-
-    <div id="sc-main" class="screen">
-        <div id="text-log" class="msg-area"></div>
-        
-        <div>
-            <div id="item1" class="inv-slot">?</div>
-            <div id="item2" class="inv-slot">?</div>
-        </div>
-
-        <div id="btns" class="btn-grid"></div>
-    </div>
-
-    <div id="sc-input" class="screen">
-        <h2 id="input-title">暗号入力</h2>
-        <input type="number" id="code-in" placeholder="000">
-        <div class="btn-grid">
-            <button onclick="checkCode()">決定</button>
-            <button onclick="go('room')">戻る</button>
+<div id="ui-layer">
+    <div id="crosshair"></div>
+    
+    <div class="hud" id="msg-box">
+        <div id="text">マウスをドラッグして見渡し、クリックで調べよう</div>
+        <div class="inventory">
+            <div id="inv-note" class="slot">?</div>
+            <div id="inv-key" class="slot">?</div>
         </div>
     </div>
 
-    <div id="sc-clear" class="screen">
-        <h1 style="color:#2ecc71">脱出成功！</h1>
-        <p>あなたは無事に部屋を後にした。</p>
-        <button onclick="location.reload()">もう一度プレイ</button>
+    <div id="numpad">
+        <h3>金庫の暗号</h3>
+        <input type="number" id="code-input" style="font-size: 24px; width: 100px; text-align: center;"><br><br>
+        <button onclick="checkCode()">開ける</button>
+        <button onclick="closeNumpad()" style="background:#7f8c8d">戻る</button>
     </div>
 </div>
 
-<script>
-    const data = {
-        room: {
-            msg: "本棚と、古い机、頑丈そうなドアがある。",
-            btns: [
-                { t: "本棚を見る", f: () => getNote() },
-                { t: "机を調べる", f: () => goInput() },
-                { t: "ドアを開ける", f: () => tryExit() }
-            ]
-        }
-    };
-
-    let hasNote = false;
-    let hasKey = false;
-
-    // 画面切り替え関数
-    function show(id) {
-        document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-        document.getElementById(id).classList.add('active');
-    }
-
-    // シーン移動
-    function go(place) {
-        show('sc-main');
-        const log = document.getElementById('text-log');
-        const btnArea = document.getElementById('btns');
-        
-        log.innerText = data[place].msg;
-        btnArea.innerHTML = '';
-        
-        data[place].btns.forEach(b => {
-            const btn = document.createElement('button');
-            btn.innerText = b.t;
-            btn.onclick = b.f;
-            btnArea.appendChild(btn);
-        });
-    }
-
-    function getNote() {
-        hasNote = true;
-        document.getElementById('item1').innerText = '📜';
-        alert("本に紙が挟まっていた！\n『本=8, 机=4, 椅子=1』と書かれている。");
-    }
-
-    function goInput() {
-        show('sc-input');
-    }
-
-    function checkCode() {
-        const val = document.getElementById('code-in').value;
-        if(val === "841") {
-            alert("金庫が開いた！「金の鍵」を手に入れた！");
-            hasKey = true;
-            document.getElementById('item2').innerText = '🔑';
-            go('room');
-        } else {
-            alert("番号が違うようだ...");
-        }
-    }
-
-    function tryExit() {
-        if(hasKey) {
-            show('sc-clear');
-        } else {
-            alert("鍵がかかっていて開かない。");
+<script type="importmap">
+    {
+        "imports": {
+            "three": "https://unpkg.com/three@0.160.0/build/three.module.js"
         }
     }
 </script>
-</body>
-</html>
+
+<script type="module">
+    import * as THREE from 'three';
+
+    // --- 基本設定 ---
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x111111);
+    const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    document.body.appendChild(renderer.domElement);
+
+    // --- ライト ---
+    const light = new THREE.PointLight(0xffffff, 50, 100);
+    light.position.set(0, 5, 0);
+    scene.add(light);
+    scene.add(new THREE.AmbientLight(0x404040));
+
+    // --- 部屋の作成 (床・壁) ---
+    const roomGroup = new THREE.Group();
+    const wallMat = new THREE.MeshStandardMaterial({ color: 0x5d4037 });
+    const floorMat = new THREE.MeshStandardMaterial({ color: 0x333333 });
+
+    const floor = new THREE.Mesh(new THREE.BoxGeometry(10, 0.1, 10), floorMat);
+    roomGroup.add(floor);
+
+    // 壁の配置
+    const createWall = (x, z, ry, color = 0x5d4037) => {
+        const wall = new THREE.Mesh(new THREE.PlaneGeometry(10, 5), new THREE.MeshStandardMaterial({color: color, side: THREE.DoubleSide}));
+        wall.position.set(x, 2.5, z);
+        wall.rotation.y = ry;
+        return wall;
+    };
+    roomGroup.add(createWall(0, -5, 0, 0x4a312c)); // 奥
+    roomGroup.add(createWall(-5, 0, Math.PI/2));    // 左
+    roomGroup.add(createWall(5, 0, -Math.PI/2));   // 右
+    scene.add(roomGroup);
+
+    // --- オブジェクト配置 ---
+    // 1. 本棚 (左の壁)
+    const shelf = new THREE.Mesh(new THREE.BoxGeometry(1, 3, 3), new THREE.MeshStandardMaterial({color: 0x2e1a10}));
+    shelf.position.set(-4.5, 1.5, 0);
+    shelf.name = "bookshelf";
+    scene.add(shelf);
+
+    // 2. 机 (右の壁)
+    const desk = new THREE.Mesh(new THREE.BoxGeometry(2, 1, 3), new THREE.MeshStandardMaterial({color: 0x3e2723}));
+    desk.position.set(4, 0.5, 0);
+    desk.name = "desk";
+    scene.add(desk);
+
+    // 3. ドア (正面の壁)
+    const door = new THREE.Mesh(new THREE.BoxGeometry(2, 3.5, 0.2), new THREE.MeshStandardMaterial({color: 0x222222}));
+    door.position.set(0, 1.75, -4.9);
+    door.name = "door";
+    scene.add(door);
+
+    camera.position.set(0, 1.7, 3);
+
+    // --- ゲームロジック ---
+    let hasNote = false;
+    let hasKey = false;
+    const raycaster = new THREE.Raycaster();
+    const mouse = new THREE.Vector2();
+
+    // クリック判定
+    window.addEventListener('click', (event) =>
