@@ -2,160 +2,212 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>3D Walkable Escape</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Immersive Escape</title>
     <style>
-        :root { --wall: #e0e0e0; --floor: #795548; --accent: #2196F3; }
-        body { margin: 0; background: #222; color: #fff; font-family: sans-serif; overflow: hidden; height: 100vh; display: flex; flex-direction: column; }
+        :root {
+            --wall-color: #f5f5f5;
+            --floor-color: #3e2723;
+            --ui-bg: rgba(0, 0, 0, 0.6);
+        }
+        body { margin: 0; background: #000; color: #fff; font-family: 'Courier New', sans-serif; overflow: hidden; height: 100vh; }
 
-        /* 3Dレンダリングエリア */
+        /* 3D 空間 (全画面) */
         #stage {
-            width: 100%; height: 50vh; perspective: 600px;
-            background: #87CEEB; position: relative; overflow: hidden;
+            width: 100vw; height: 100vh; perspective: 600px;
+            overflow: hidden; position: relative;
         }
 
         #camera {
             width: 100%; height: 100%; position: absolute;
-            transform-style: preserve-3d; transition: transform 0.3s ease;
+            transform-style: preserve-3d; transition: transform 0.2s ease-out;
         }
 
-        /* 空間（部屋） */
-        .room {
-            position: absolute; width: 400px; height: 400px;
-            top: 50%; left: 50%; margin: -200px;
+        .world {
+            position: absolute; width: 1000px; height: 1000px;
+            top: 50%; left: 50%; margin: -500px;
             transform-style: preserve-3d;
         }
 
-        .plane {
-            position: absolute; width: 400px; height: 400px;
-            background: var(--wall); border: 2px solid #ccc;
-            display: flex; align-items: center; justify-content: center; font-size: 50px;
-            backface-visibility: hidden;
+        /* 巨大な部屋の壁 */
+        .surface {
+            position: absolute; width: 1000px; height: 1000px;
+            background: var(--wall-color); border: 4px solid #ddd;
+            display: flex; align-items: center; justify-content: center;
+            backface-visibility: hidden; font-size: 150px;
         }
 
-        /* 迷路の構造 (Z方向に並べる) */
-        .p-front  { transform: translateZ(200px); }
-        .p-back   { transform: rotateY(180deg) translateZ(200px); }
-        .p-left   { transform: rotateY(-90deg) translateZ(200px); }
-        .p-right  { transform: rotateY(90deg) translateZ(200px); }
-        .p-floor  { transform: rotateX(-90deg) translateZ(200px); background: var(--floor); }
-        .p-ceil   { transform: rotateX(90deg) translateZ(200px); background: #fff; }
+        .front  { transform: translateZ(500px); }
+        .back   { transform: rotateY(180deg) translateZ(500px); }
+        .left   { transform: rotateY(-90deg) translateZ(500px); }
+        .right  { transform: rotateY(90deg) translateZ(500px); }
+        .floor  { transform: rotateX(-90deg) translateZ(500px); background: var(--floor-color); }
+        .ceil   { transform: rotateX(90deg) translateZ(500px); background: #fff; }
 
-        /* UIと操作 */
-        #ui { flex: 1; background: #fff; color: #333; display: flex; flex-direction: column; }
-        #msg { padding: 15px; font-size: 0.9rem; border-bottom: 1px solid #ddd; height: 60px; overflow-y: auto; }
-        
-        .d-pad {
-            display: grid; grid-template-columns: 70px 70px 70px; grid-template-rows: 60px 60px;
-            gap: 10px; justify-content: center; padding: 20px;
+        /* UI要素：左上（アイテム） */
+        #inventory {
+            position: fixed; top: 20px; left: 20px;
+            background: var(--ui-bg); padding: 15px; border-radius: 8px;
+            min-width: 150px; border-left: 4px solid #3498db;
         }
-        .btn {
-            background: #eee; border: 2px solid #ccc; border-radius: 10px;
-            display: flex; align-items: center; justify-content: center; cursor: pointer; font-weight: bold;
-        }
-        .btn:active { background: #bbb; }
-        .btn-action { grid-column: span 3; background: var(--accent); color: white; border: none; }
 
-        #pass-ui { padding: 0 20px; text-align: center; }
-        input { width: 100px; font-size: 1.5rem; text-align: center; border: 2px solid #ccc; border-radius: 5px; }
-
-        #clear {
-            position: fixed; top:0; left:0; width:100%; height:100%;
-            background: #fff; display: none; flex-direction: column; justify-content: center; align-items: center; z-index: 1000;
+        /* UI要素：右上（探索ポイント通知） */
+        #detector {
+            position: fixed; top: 20px; right: 20px;
+            background: var(--ui-bg); padding: 15px; border-radius: 8px;
+            color: #f1c40f; font-weight: bold; display: none;
+            border-right: 4px solid #f1c40f;
         }
+
+        /* 下部：メッセージログ */
+        #log {
+            position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%);
+            width: 80%; background: var(--ui-bg); padding: 20px; border-radius: 10px;
+            text-align: center; font-size: 1.1rem;
+        }
+
+        /* モーダル */
+        #modal {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.8); display: none;
+            justify-content: center; align-items: center; z-index: 100;
+        }
+        .modal-card { background: #fff; color: #333; padding: 40px; border-radius: 20px; text-align: center; }
+
+        /* ヘルプ */
+        .help { position: fixed; bottom: 10px; right: 10px; font-size: 0.7rem; color: #888; }
     </style>
 </head>
 <body>
 
 <div id="stage">
     <div id="camera">
-        <div class="room">
-            <div class="plane p-front">🚪</div> <div class="plane p-back">🖼️</div>  <div class="plane p-left">📚</div>  <div class="plane p-right">🪴</div> <div class="plane p-floor"></div>
-            <div class="plane p-ceil"></div>
+        <div class="world">
+            <div class="surface front">🚪</div>
+            <div class="surface back">🖼️</div>
+            <div class="surface left">📚</div>
+            <div class="surface right">🗝️</div>
+            <div class="surface floor"></div>
+            <div class="surface ceil"></div>
         </div>
     </div>
 </div>
 
-<div id="ui">
-    <div id="msg">矢印で部屋の中を移動できる。目の前のものを詳しく調べるには「CHECK」を押せ。</div>
-    
-    <div id="pass-ui">
-        <input type="number" id="code" placeholder="----">
-    </div>
+<div id="inventory">ITEMS: <span id="item-list">なし</span></div>
+<div id="detector">🔎 近くに調べられる場所がある！</div>
 
-    <div class="d-pad">
-        <div></div>
-        <div class="btn" onclick="move('f')">前進</div>
-        <div></div>
-        <div class="btn" onclick="turn('l')">左向</div>
-        <div class="btn" onclick="move('b')">後退</div>
-        <div class="btn" onclick="turn('r')">右向</div>
-        <div class="btn btn-action" onclick="check()">CHECK (調べる / 脱出)</div>
-    </div>
+<div id="log">矢印キーで移動。探索ポイントが右上に表示されたら [SPACE] でアクション。</div>
+
+<div id="modal">
+    <div class="modal-card" id="modal-content"></div>
 </div>
 
-<div id="clear">
-    <h1>ESCAPE SUCCESS!</h1>
-    <p>おめでとう！よしたは部屋を攻略した！</p>
-    <button onclick="location.reload()" style="padding: 15px 30px; font-size: 1rem;">最初から</button>
-</div>
+<div class="help">MOVE: Arrow Keys | ACTION/USE: Space</div>
 
 <script>
-    let posX = 0, posZ = 0, rotY = 0;
-    const msgEl = document.getElementById('msg');
+    let px = 0, pz = 0, ry = 0;
+    let items = [];
+    let currentSpot = null;
 
-    function updateCamera() {
-        const cam = document.getElementById('camera');
-        // 前進・後退などの「立体的な移動」をtransformで表現
-        cam.style.transform = `rotateY(${rotY}deg) translate3d(${-posX}px, 0, ${-posZ}px)`;
-    }
+    // キー操作
+    window.addEventListener('keydown', (e) => {
+        const step = 30;
+        const rotStep = 10;
 
-    function move(dir) {
-        // 現在の向きに合わせて座標を計算
-        const rad = rotY * Math.PI / 180;
-        const step = 200; // 1マスの移動距離
-        if (dir === 'f') {
-            posX += Math.sin(rad) * step;
-            posZ += Math.cos(rad) * step;
-        } else {
-            posX -= Math.sin(rad) * step;
-            posZ -= Math.cos(rad) * step;
+        if (document.getElementById('modal').style.display === 'flex') {
+            if (e.key === ' ') closeModal();
+            return;
+        }
+
+        switch(e.key) {
+            case 'ArrowUp':
+                px -= Math.sin(ry * Math.PI / 180) * step;
+                pz -= Math.cos(ry * Math.PI / 180) * step;
+                break;
+            case 'ArrowDown':
+                px += Math.sin(ry * Math.PI / 180) * step;
+                pz += Math.cos(ry * Math.PI / 180) * step;
+                break;
+            case 'ArrowLeft': ry -= rotStep; break;
+            case 'ArrowRight': ry += rotStep; break;
+            case ' ': e.preventDefault(); interact(); break;
         }
         
-        // 部屋の範囲外に出ないように制限
-        posX = Math.max(-100, Math.min(100, posX));
-        posZ = Math.max(-100, Math.min(100, posZ));
+        // 壁の衝突判定
+        px = Math.max(-400, Math.min(400, px));
+        pz = Math.max(-400, Math.min(400, pz));
         
-        updateCamera();
-        msgEl.innerText = "歩いて移動した。";
+        updateView();
+        checkProximity();
+    });
+
+    function updateView() {
+        document.getElementById('camera').style.transform = 
+            `rotateY(${-ry}deg) translate3d(${-px}px, 0, ${-pz}px)`;
     }
 
-    function turn(dir) {
-        rotY += (dir === 'r') ? -90 : 90;
-        updateCamera();
-        msgEl.innerText = "向きを変えた。";
+    // 右上の探索通知
+    function checkProximity() {
+        const rot = ((ry % 360) + 360) % 360;
+        const detector = document.getElementById('detector');
+        
+        currentSpot = null;
+        if (pz < -350 && (rot < 30 || rot > 330)) currentSpot = 'door';
+        else if (pz > 350 && (rot > 150 && rot < 210)) currentSpot = 'picture';
+        else if (px < -350 && (rot > 240 && rot < 300)) currentSpot = 'shelf';
+        else if (px > 350 && (rot > 60 && rot < 120)) currentSpot = 'key';
+
+        detector.style.display = currentSpot ? 'block' : 'none';
     }
 
-    function check() {
-        // 向いている方向(rotY)と位置によって、調べる対象を変える
-        const angle = ((rotY % 360) + 360) % 360;
-        const inputCode = document.getElementById('code').value;
-
-        if (angle === 0 && posZ > 50) { // 正面：ドア
-            if (inputCode === "3650") {
-                document.getElementById('clear').style.display = 'flex';
-            } else {
-                msgEl.innerText = "ドア：暗証番号が必要だ。ヒントを部屋から探せ。";
+    // スペースキーのアクション
+    function interact() {
+        if (!currentSpot) {
+            if (items.length > 0) {
+                showModal("アイテム使用", `「${items[0]}」を掲げてみたが、ここでは何も起きない。`);
             }
-        } else if (angle === 90) { // 左：本棚
-            msgEl.innerText = "本棚：『一年は「365」日、最後は「0」で締めくくる』";
-        } else if (angle === 180) { // 後ろ：絵
-            msgEl.innerText = "絵：三角形が描いてある。それ以外に不自然な点はない。";
-        } else if (angle === 270) { // 右：植物
-            msgEl.innerText = "植物：土の中に何も隠されていない。ただの植物だ。";
-        } else {
-            msgEl.innerText = "ここには何もないようだ。";
+            return;
         }
+
+        switch(currentSpot) {
+            case 'key':
+                if (!items.includes('銀の鍵')) {
+                    items.push('銀の鍵');
+                    updateInventory();
+                    showModal("入手", "「銀の鍵」を拾った！");
+                } else {
+                    showModal("観察", "ここにはもう何もない。");
+                }
+                break;
+            case 'shelf':
+                showModal("本棚", "『出口の扉は、銀の鍵を所持した状態で、スペースキーで「使用」せよ。』");
+                break;
+            case 'picture':
+                showModal("絵画", "美しい風景画だ。右下の鍵のマークが光っている。");
+                break;
+            case 'door':
+                if (items.includes('銀の鍵')) {
+                    showModal("脱出成功", "鍵を使った！扉がゆっくりと開いていく...");
+                    setTimeout(() => location.reload(), 3000);
+                } else {
+                    showModal("扉", "鍵がかかっている。どこかに鍵があるはずだ。");
+                }
+                break;
+        }
+    }
+
+    function updateInventory() {
+        document.getElementById('item-list').innerText = items.join(', ');
+    }
+
+    function showModal(title, text) {
+        const m = document.getElementById('modal');
+        document.getElementById('modal-content').innerHTML = `<h2>${title}</h2><p>${text}</p><p style='font-size:0.8rem; color:#888;'>[SPACE] で閉じる</p>`;
+        m.style.display = 'flex';
+    }
+
+    function closeModal() {
+        document.getElementById('modal').style.display = 'none';
     }
 </script>
 </body>
