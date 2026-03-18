@@ -2,20 +2,21 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <title>Bright Pastel Escape - Final</title>
+    <title>Pastel Escape - Room 2 with Rabbit</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.min.js"></script>
     <style>
-        body { margin: 0; overflow: hidden; background: #fff0f5; font-family: 'Meiryo', sans-serif; }
+        body { margin: 0; overflow: hidden; background: #fff; font-family: 'Hiragino Kaku Gothic Pro', sans-serif; }
+        /* スタート画面 */
         #overlay { 
             position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
-            background: #fff0f5; display: flex; align-items: center; 
-            justify-content: center; flex-direction: column; z-index: 100;
+            background: #ffeef2; display: flex; align-items: center; 
+            justify-content: center; flex-direction: column; z-index: 200;
         }
         #start-btn { 
             padding: 20px 60px; font-size: 24px; background: #ff85a2; border: none; 
             color: white; cursor: pointer; border-radius: 50px; font-weight: bold;
-            box-shadow: 0 4px 15px rgba(255, 133, 162, 0.4);
         }
+        /* UI要素 */
         #ui { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
         #inventory { position: absolute; top: 20px; left: 20px; display: flex; flex-direction: column; gap: 10px; pointer-events: auto; }
         .slot { 
@@ -23,19 +24,25 @@
             display: flex; align-items: center; justify-content: center; font-size: 40px; border-radius: 15px; 
         }
         .slot.selected { border-color: #ff85a2; box-shadow: 0 0 20px #ff85a2; background: #fff; }
+        /* 右上の操作ガイド（追加） */
+        #controls-guide { 
+            position: absolute; top: 20px; right: 20px; background: rgba(255,255,255,0.8); 
+            padding: 15px; border-radius: 10px; border: 2px solid #ff85a2; color: #ff4081;
+            font-size: 14px; line-height: 1.6; font-weight: bold;
+        }
         #msg-box { position: absolute; bottom: 40px; width: 100%; text-align: center; }
         #text { 
             display: inline-block; background: white; color: #ff4081; padding: 15px 45px; 
-            border-radius: 50px; border: 3px solid #f8bbd0; font-size: 20px; font-weight: bold;
+            border-radius: 50px; border: 3px solid #f8bbd0; font-size: 18px; font-weight: bold;
         }
     </style>
 </head>
 <body>
 
 <div id="overlay">
-    <h1 style="color: #ff4081; font-size: 40px;">🌸 PASTEL ROOM 🌸</h1>
-    <p style="color: #ff85a2;">[W][A][S][D] でいどう / [Space] でアイテムをえらぶ</p>
-    <button id="start-btn">スタート！</button>
+    <h1 style="color: #ff4081;">🌸 PASTEL ESCAPE 🌸</h1>
+    <p>ボタンをおしてはじめてね</p>
+    <button id="start-btn">あそぶ！</button>
 </div>
 
 <div id="ui">
@@ -43,17 +50,23 @@
         <div id="slot-0" class="slot"></div>
         <div id="slot-1" class="slot"></div>
     </div>
-    <div id="msg-box"><div id="text">お部屋をたんさくしてね！</div></div>
+    <div id="controls-guide">
+        【そうさほうほう】<br>
+        いどう：W, A, S, D<br>
+        視点：マウス<br>
+        えらぶ：Spaceキー<br>
+        しらべる：クリック
+    </div>
+    <div id="msg-box"><div id="text">お部屋をたんさくしましょう！</div></div>
 </div>
 
 <script>
-    // 状態管理
     const state = { inv: [], sel: -1, doorOpen: false };
-    const items = { key1: "🗝️", key2: "🔑" };
+    const items = { key1: "🗝️", rabbitKey: "🔑" };
 
-    // --- Scene & Camera ---
+    // --- シーン設定 ---
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0xfff0f5); // 明るいピンク
+    scene.background = new THREE.Color(0xfff0f5);
 
     const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
     const renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -61,10 +74,9 @@
     renderer.shadowMap.enabled = true;
     document.body.appendChild(renderer.domElement);
 
-    // --- Lighting (とにかく明るく) ---
-    const ambient = new THREE.AmbientLight(0xffffff, 1.0); // 全体を照らす
-    scene.add(ambient);
-    const light = new THREE.DirectionalLight(0xffffff, 0.8);
+    const amb = new THREE.AmbientLight(0xffffff, 1.0);
+    scene.add(amb);
+    const light = new THREE.DirectionalLight(0xffffff, 0.5);
     light.position.set(5, 10, 5);
     scene.add(light);
 
@@ -72,7 +84,6 @@
     const room1 = new THREE.Group();
     const wallMat1 = new THREE.MeshStandardMaterial({ color: 0xffcad4, side: THREE.BackSide });
     const floorMat = new THREE.MeshStandardMaterial({ color: 0xffffff });
-    
     const box1 = new THREE.Mesh(new THREE.BoxGeometry(12, 7, 12), wallMat1);
     box1.position.y = 3.5;
     const floor1 = new THREE.Mesh(new THREE.PlaneGeometry(12, 12), floorMat);
@@ -91,26 +102,40 @@
     room2.add(box2, floor2);
     scene.add(room2);
 
-    // --- 家具 (棚) ---
+    // --- ウサギのぬいぐるみ（部屋2に配置） ---
+    const rabbit = new THREE.Group();
+    const rabbitMat = new THREE.MeshStandardMaterial({ color: 0xff85a2 });
+    const body = new THREE.Mesh(new THREE.SphereGeometry(0.5, 16, 16), rabbitMat);
+    body.position.y = 0.5;
+    const head = new THREE.Mesh(new THREE.SphereGeometry(0.4, 16, 16), rabbitMat);
+    head.position.y = 1.2;
+    const earL = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.6, 0.1), rabbitMat);
+    earL.position.set(-0.2, 1.7, 0);
+    const earR = earL.clone(); earR.position.x = 0.2;
+    rabbit.add(body, head, earL, earR);
+    rabbit.position.set(15, 0, -3);
+    rabbit.name = "rabbit";
+    scene.add(rabbit);
+
+    // --- 家具・ドア ---
     const shelf = new THREE.Group();
-    const woodMat = new THREE.MeshStandardMaterial({ color: 0xe6be8a }); // 明るい木目
+    const woodMat = new THREE.MeshStandardMaterial({ color: 0xe6be8a });
     const back = new THREE.Mesh(new THREE.BoxGeometry(2.5, 5, 0.2), woodMat);
     back.position.y = 2.5; shelf.add(back);
-    for(let i=0; i<4; i++){
+    for(let i=0; i<3; i++){
         const p = new THREE.Mesh(new THREE.BoxGeometry(2.5, 0.1, 1), woodMat);
-        p.position.y = i*1.5 + 0.1; p.position.z = 0.4; shelf.add(p);
+        p.position.y = i*2 + 0.1; p.position.z = 0.4; shelf.add(p);
     }
     const vase = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.3, 0.6), new THREE.MeshStandardMaterial({color: 0x98ff98}));
-    vase.position.set(0.5, 3.4, 0.5); vase.name = "vase"; shelf.add(vase);
+    vase.position.set(0.5, 2.4, 0.5); vase.name = "vase"; shelf.add(vase);
     shelf.position.set(-4.5, 0, -4);
     scene.add(shelf);
 
-    // --- ドア ---
     const door = new THREE.Mesh(new THREE.BoxGeometry(0.2, 5, 2.5), new THREE.MeshStandardMaterial({color: 0xffffff}));
     door.position.set(6, 2.5, 0); door.name = "door1";
     scene.add(door);
 
-    // --- 操作ロジック ---
+    // --- 操作 ---
     camera.position.set(0, 3, 5);
     const keys = {};
     let yaw = 0, pitch = 0;
@@ -122,12 +147,12 @@
 
     window.addEventListener('keydown', e => {
         keys[e.code] = true;
-        // 【修正点】スペースキーでアイテムを回す
+        // スペースキーでアイテム選択
         if (e.code === 'Space') {
             if (state.inv.length > 0) {
                 state.sel = (state.sel + 1) % state.inv.length;
                 updateUI();
-                notify("アイテムを切りかえました✨");
+                notify("アイテムをえらびました♪");
             }
         }
     });
@@ -154,7 +179,7 @@
                 camera.position.addScaledVector(dir, speed);
             }
             camera.position.y = 3;
-            // 壁の判定
+            // 境界
             if (camera.position.x < -5) camera.position.x = -5;
             if (!state.doorOpen && camera.position.x > 5.5) camera.position.x = 5.5;
             if (camera.position.x > 20) camera.position.x = 20;
@@ -165,7 +190,6 @@
     }
     animate();
 
-    // クリック判定
     window.addEventListener('mousedown', () => {
         if (!document.pointerLockElement) return;
         const ray = new THREE.Raycaster();
@@ -174,20 +198,22 @@
 
         if (hits.length > 0 && hits[0].distance < 4) {
             let obj = hits[0].object;
-            if (obj.name === "vase") {
+            // ウサギをクリック
+            if (obj.parent && obj.parent.name === "rabbit") {
+                notify("ウサギ：こんにちは！となりの部屋へようこそ♪");
+            } else if (obj.name === "vase") {
                 if (!state.inv.includes("key1")) {
                     state.inv.push("key1");
-                    state.sel = state.inv.length - 1;
-                    updateUI();
-                    notify("かびんの中から「カギ」を見つけたよ！🔑");
+                    state.sel = 0; updateUI();
+                    notify("カギを手に入れたよ！Spaceキーでえらんでね。");
                 }
             } else if (obj.name === "door1") {
                 if (state.sel !== -1 && state.inv[state.sel] === "key1") {
                     state.doorOpen = true;
-                    notify("カギが開いたよ！おとなりへ行ってみよう♪");
+                    notify("ドアが開いたよ！となりのミント色のお部屋へ！");
                     obj.position.y += 5;
                 } else {
-                    notify("カギがかかっているみたい...");
+                    notify("カギがかかっているみたい。");
                 }
             }
         }
