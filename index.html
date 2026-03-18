@@ -2,45 +2,40 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <title>Realistic Escape - 2 Rooms Edition</title>
+    <title>Realistic Escape - Perfect Movement</title>
     <style>
-        body { margin: 0; overflow: hidden; background: #000; font-family: 'Helvetica Neue', sans-serif; }
+        body { margin: 0; overflow: hidden; background: #111; font-family: sans-serif; }
         canvas { display: block; }
-        #ui { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
-        
-        /* スタート画面（移動できない問題を解決するため） */
         #overlay { 
             position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
-            background: rgba(0,0,0,0.8); display: flex; align-items: center; justify-content: center; 
-            flex-direction: column; color: white; pointer-events: auto; z-index: 100;
+            background: rgba(0,0,0,0.85); display: flex; align-items: center; 
+            justify-content: center; flex-direction: column; color: white; z-index: 100;
         }
         #start-btn { 
-            padding: 20px 50px; font-size: 24px; background: #00d4ff; border: none; 
-            color: black; cursor: pointer; border-radius: 5px; font-weight: bold;
+            padding: 15px 40px; font-size: 20px; background: #00d4ff; border: none; 
+            color: black; cursor: pointer; border-radius: 4px; font-weight: bold;
         }
-
-        #inventory { position: absolute; top: 20px; left: 20px; display: flex; flex-direction: column; gap: 10px; pointer-events: auto; }
-        .slot { width: 64px; height: 64px; border: 2px solid #444; background: rgba(0,0,0,0.8); display: flex; align-items: center; justify-content: center; font-size: 30px; border-radius: 4px; }
+        #ui { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
+        #inventory { position: absolute; top: 20px; left: 20px; display: flex; flex-direction: column; gap: 8px; pointer-events: auto; }
+        .slot { width: 60px; height: 60px; border: 2px solid #444; background: rgba(0,0,0,0.8); display: flex; align-items: center; justify-content: center; font-size: 25px; }
         .slot.selected { border-color: #00d4ff; box-shadow: 0 0 10px #00d4ff; }
-        
-        #msg-box { position: absolute; bottom: 40px; width: 100%; text-align: center; }
-        #text { display: inline-block; background: rgba(0,0,0,0.9); color: white; padding: 15px 40px; border-radius: 4px; border-left: 4px solid #00d4ff; font-size: 18px; }
+        #msg-box { position: absolute; bottom: 30px; width: 100%; text-align: center; }
+        #text { display: inline-block; background: rgba(0,0,0,0.8); color: white; padding: 10px 25px; border-left: 4px solid #00d4ff; }
     </style>
 </head>
 <body>
 
 <div id="overlay">
-    <h1>REALISTIC ESCAPE</h1>
-    <p>移動: WASD / 視点: マウス / 調べる: クリック / 使う: Shift</p>
-    <button id="start-btn">CLICK TO START</button>
+    <h1 style="letter-spacing: 0.2em;">THE ROOMS</h1>
+    <p>操作: [W][A][S][D] で移動 / マウスで視点 / クリックで調べる</p>
+    <button id="start-btn">ゲームを開始する</button>
 </div>
 
 <div id="ui">
     <div id="inventory">
         <div id="slot-0" class="slot"></div>
-        <div id="slot-1" class="slot"></div>
     </div>
-    <div id="msg-box"><div id="text">部屋を探索してください。</div></div>
+    <div id="msg-box"><div id="text">部屋を探索して出口を探してください。</div></div>
 </div>
 
 <script type="importmap">
@@ -50,11 +45,11 @@
 <script type="module">
     import * as THREE from 'three';
 
-    const state = { inv: [], sel: -1, doorOpen: false };
-    const items = { key: { name: "真鍮の鍵", icon: "🗝️" } };
+    const state = { inv: [], sel: 0, doorOpen: false };
 
-    // --- Scene Setup ---
+    // --- Scene & Camera ---
     const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x050505);
     const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
     const renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setSize(window.innerWidth, window.innerHeight);
@@ -62,147 +57,109 @@
     document.body.appendChild(renderer.domElement);
 
     // --- Lighting ---
-    const ambient = new THREE.AmbientLight(0xffffff, 0.4);
-    scene.add(ambient);
-    const pointLight = new THREE.PointLight(0xffffff, 60);
-    pointLight.position.set(0, 6, 0);
-    pointLight.castShadow = true;
-    scene.add(pointLight);
+    scene.add(new THREE.AmbientLight(0xffffff, 0.3));
+    const spot = new THREE.PointLight(0xffffff, 80, 20);
+    spot.position.set(0, 6, 0);
+    spot.castShadow = true;
+    scene.add(spot);
 
-    // --- Room Construction (2 Rooms) ---
-    function createRoom(xOffset, color, name) {
-        const roomGroup = new THREE.Group();
-        roomGroup.position.x = xOffset;
-        
-        // 床
-        const floorGeo = new THREE.PlaneGeometry(12, 12);
-        const floorMat = new THREE.MeshStandardMaterial({ color: 0x222222, roughness: 0.8 });
-        const floor = new THREE.Mesh(floorGeo, floorMat);
-        floor.rotation.x = -Math.PI / 2;
-        floor.receiveShadow = true;
-        roomGroup.add(floor);
-
-        // 壁
-        const wallGeo = new THREE.BoxGeometry(12, 7, 12);
-        const wallMat = new THREE.MeshStandardMaterial({ color: color, side: THREE.BackSide, roughness: 0.9 });
-        const walls = new THREE.Mesh(wallGeo, wallMat);
-        walls.position.y = 3.5;
-        walls.receiveShadow = true;
-        roomGroup.add(walls);
-
-        scene.add(roomGroup);
-        return roomGroup;
+    // --- Room Construction ---
+    function makeRoom(x, color) {
+        const group = new THREE.Group();
+        group.position.x = x;
+        const floor = new THREE.Mesh(new THREE.PlaneGeometry(12, 12), new THREE.MeshStandardMaterial({ color: 0x1a1a1a, roughness: 0.8 }));
+        floor.rotation.x = -Math.PI / 2; floor.receiveShadow = true;
+        group.add(floor);
+        const walls = new THREE.Mesh(new THREE.BoxGeometry(12, 7, 12), new THREE.MeshStandardMaterial({ color: color, side: THREE.BackSide }));
+        walls.position.y = 3.5; walls.receiveShadow = true;
+        group.add(walls);
+        scene.add(group);
+        return group;
     }
+    const room1 = makeRoom(0, 0x333333);
+    const room2 = makeRoom(12.1, 0x1a2a3a);
 
-    const room1 = createRoom(0, 0x444444, "Entrance");
-    const room2 = createRoom(12.1, 0x2c3e50, "Study"); // 隣の部屋
+    // --- Objects (Shelf, Clock, Vase) ---
+    // 棚
+    const shelf = new THREE.Group();
+    const woodMat = new THREE.MeshStandardMaterial({ color: 0x2d1b0f });
+    const back = new THREE.Mesh(new THREE.BoxGeometry(2.5, 5, 0.2), woodMat);
+    back.position.set(0, 2.5, -0.4);
+    shelf.add(back);
+    [0.1, 1.5, 3, 4.8].forEach(y => {
+        const plate = new THREE.Mesh(new THREE.BoxGeometry(2.5, 0.1, 1), woodMat);
+        plate.position.y = y; shelf.add(plate);
+    });
+    // 花瓶
+    const vase = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.3, 0.7, 12), new THREE.MeshStandardMaterial({color: 0x005566, roughness: 0.2}));
+    vase.position.set(0.5, 3.4, 0); vase.name = "vase";
+    shelf.add(vase);
+    shelf.position.set(-4, 0, -5);
+    room1.add(shelf);
 
-    // --- リアルな家具・小物 ---
+    // 時計
+    const clock = new THREE.Mesh(new THREE.CylinderGeometry(0.6, 0.6, 0.1, 32), new THREE.MeshStandardMaterial({color: 0xffffff}));
+    clock.rotation.x = Math.PI / 2; clock.position.set(0, 4.5, -5.9);
+    room1.add(clock);
 
-    // 1. 棚
-    function addShelf(parent) {
-        const shelf = new THREE.Group();
-        const woodMat = new THREE.MeshStandardMaterial({ color: 0x3d2b1f, roughness: 0.6 });
-        const frame = new THREE.Mesh(new THREE.BoxGeometry(2, 4.5, 1), woodMat);
-        frame.position.y = 2.25;
-        shelf.add(frame);
-        
-        // 花瓶 (小物追加)
-        const vaseGeo = new THREE.CylinderGeometry(0.15, 0.25, 0.6, 16);
-        const vaseMat = new THREE.MeshStandardMaterial({ color: 0x008080, roughness: 0.1, metalness: 0.5 });
-        const vase = new THREE.Mesh(vaseGeo, vaseMat);
-        vase.position.set(0, 4.8, 0);
-        vase.name = "vase";
-        shelf.add(vase);
-
-        shelf.position.set(-4.5, 0, -4.5);
-        shelf.name = "shelf";
-        parent.add(shelf);
-    }
-    addShelf(room1);
-
-    // 2. 壁掛け時計 (小物追加)
-    function addClock(parent) {
-        const clock = new THREE.Group();
-        const face = new THREE.Mesh(new THREE.CylinderGeometry(0.6, 0.6, 0.1, 32), new THREE.MeshStandardMaterial({color:0xffffff}));
-        face.rotation.x = Math.PI / 2;
-        const frame = new THREE.Mesh(new THREE.TorusGeometry(0.6, 0.05, 16, 100), new THREE.MeshStandardMaterial({color:0x331100}));
-        
-        const hourHand = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.3, 0.05), new THREE.MeshStandardMaterial({color:0x000000}));
-        hourHand.position.y = 0.15;
-        clock.add(face, frame, hourHand);
-        clock.position.set(0, 4.5, -5.9);
-        parent.add(clock);
-    }
-    addClock(room1);
-
-    // 3. ドア (接続用)
+    // ドア
     const door = new THREE.Group();
-    const doorBody = new THREE.Mesh(new THREE.BoxGeometry(2.5, 5, 0.2), new THREE.MeshStandardMaterial({color:0x1a1a1a, metalness: 0.6}));
-    doorBody.position.y = 2.5;
-    door.add(doorBody);
-    door.position.set(6, 0, 0);
-    door.rotation.y = Math.PI / 2;
-    door.name = "door_to_r2";
+    const doorBody = new THREE.Mesh(new THREE.BoxGeometry(2.5, 5, 0.2), new THREE.MeshStandardMaterial({color: 0x111111, metalness: 0.5}));
+    doorBody.position.set(0, 2.5, 0); door.add(doorBody);
+    door.position.set(6, 0, 0); door.rotation.y = Math.PI/2; door.name = "door";
     scene.add(door);
 
-    // --- Controls ---
+    // --- Movement Logic ---
     camera.position.set(0, 3, 5);
+    const keys = {};
     let yaw = 0, pitch = 0;
-    const move = { w: false, a: false, s: false, d: false };
 
     document.getElementById('start-btn').addEventListener('click', () => {
-        document.body.requestPointerLock();
+        renderer.domElement.requestPointerLock();
         document.getElementById('overlay').style.display = 'none';
     });
 
-    window.addEventListener('keydown', e => {
-        const key = e.code.toLowerCase();
-        if (key === 'keyw') move.w = true;
-        if (key === 'keys') move.s = true;
-        if (key === 'keya') move.a = true;
-        if (key === 'keyd') move.d = true;
-        if (e.code === 'Space') cycleItem();
-        if (e.shiftKey) useItem();
-    });
-    window.addEventListener('keyup', e => {
-        const key = e.code.toLowerCase();
-        if (key === 'keyw') move.w = false;
-        if (key === 'keys') move.s = false;
-        if (key === 'keya') move.a = false;
-        if (key === 'keyd') move.d = false;
-    });
+    window.addEventListener('keydown', e => keys[e.code] = true);
+    window.addEventListener('keyup', e => keys[e.code] = false);
 
     document.addEventListener('mousemove', e => {
         if (document.pointerLockElement) {
             yaw -= e.movementX * 0.002;
             pitch -= e.movementY * 0.002;
-            pitch = Math.max(-Math.PI/2.1, Math.min(Math.PI/2.1, pitch));
+            pitch = Math.max(-1.5, Math.min(1.5, pitch));
         }
     });
 
-    function animate() {
+    function update() {
         if (document.pointerLockElement) {
-            const speed = 0.1;
-            const fwd = new THREE.Vector3(-Math.sin(yaw), 0, -Math.cos(yaw));
-            const side = new THREE.Vector3(Math.cos(yaw), 0, -Math.sin(yaw));
-            
-            if (move.w) camera.position.addScaledVector(fwd, speed);
-            if (move.s) camera.position.addScaledVector(fwd, -speed);
-            if (move.a) camera.position.addScaledVector(side, -speed);
-            if (move.d) camera.position.addScaledVector(side, speed);
+            const speed = 0.12;
+            const direction = new THREE.Vector3();
+            // 向いている方向を基準に移動ベクトルを計算
+            if (keys['KeyW'] || keys['ArrowUp']) direction.z -= 1;
+            if (keys['KeyS'] || keys['ArrowDown']) direction.z += 1;
+            if (keys['KeyA'] || keys['ArrowLeft']) direction.x -= 1;
+            if (keys['KeyD'] || keys['ArrowRight']) direction.x += 1;
 
-            // 簡易的な移動範囲制限
+            if (direction.length() > 0) {
+                direction.normalize();
+                // カメラの水平回転(yaw)を適用
+                direction.applyAxisAngle(new THREE.Vector3(0, 1, 0), yaw);
+                camera.position.addScaledVector(direction, speed);
+            }
+
+            // 衝突制限（部屋の壁）
             camera.position.y = 3;
             if (camera.position.x < -5) camera.position.x = -5;
-            if (!state.doorOpen && camera.position.x > 5) camera.position.x = 5;
+            if (camera.position.z < -5) camera.position.z = -5;
+            if (camera.position.z > 5) camera.position.z = 5;
+            if (!state.doorOpen && camera.position.x > 5.5) camera.position.x = 5.5;
             if (camera.position.x > 17) camera.position.x = 17;
         }
         camera.rotation.set(pitch, yaw, 0, 'YXZ');
         renderer.render(scene, camera);
-        requestAnimationFrame(animate);
+        requestAnimationFrame(update);
     }
-    animate();
+    update();
 
     // --- Interaction ---
     window.addEventListener('mousedown', () => {
@@ -215,44 +172,32 @@
             let obj = hits[0].object;
             while(obj.parent && !obj.name) obj = obj.parent;
 
-            if (obj.name === "shelf" || obj.name === "vase") {
+            if (obj.name === "vase") {
                 if (!state.inv.includes("key")) {
                     state.inv.push("key");
-                    notify("花瓶の裏に「真鍮の鍵」が隠されていた。");
-                    updateUI();
-                } else {
-                    notify("重厚な作りの棚だ。");
+                    document.getElementById('slot-0').innerText = "🗝️";
+                    document.getElementById('slot-0').classList.add('selected');
+                    notify("花瓶の中から「古い鍵」を見つけた！");
                 }
-            } else if (obj.name === "door_to_r2") {
-                notify("鍵がかかっている。");
+            } else if (obj.name === "door") {
+                if (state.inv.includes("key")) {
+                    state.doorOpen = true;
+                    notify("鍵を使ってドアを開けた！");
+                    obj.position.y += 5; // 上にスライド
+                } else {
+                    notify("鍵がかかっている。");
+                }
             }
         }
     });
 
-    function useItem() {
-        if (state.inv[state.sel] === "key") {
-            const ray = new THREE.Raycaster();
-            ray.setFromCamera(new THREE.Vector2(0,0), camera);
-            const hits = ray.intersectObjects(scene.children, true);
-            const doorHit = hits.find(h => h.object.parent.name === "door_to_r2");
-            
-            if (doorHit && doorHit.distance < 4) {
-                state.doorOpen = true;
-                notify("鍵が開いた！隣の部屋へ行ける。");
-                doorHit.object.parent.position.y += 5; // ドアが開く
-            }
-        }
-    }
-
     function notify(t) { document.getElementById('text').innerText = t; }
-    function cycleItem() { if(state.inv.length > 0) { state.sel = (state.sel + 1) % state.inv.length; updateUI(); } }
-    function updateUI() {
-        for(let i=0; i<2; i++) {
-            const s = document.getElementById(`slot-${i}`);
-            s.innerHTML = state.inv[i] ? items[state.inv[i]].icon : "";
-            s.classList.toggle('selected', i === state.sel);
-        }
-    }
+
+    window.addEventListener('resize', () => {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+    });
 </script>
 </body>
 </html>
