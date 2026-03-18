@@ -2,45 +2,17 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <title>3D Escape - Realistic Rooms</title>
+    <title>3D Escape - Realistic Fixed</title>
     <style>
-        body { margin: 0; overflow: hidden; font-family: 'Roboto', sans-serif; background: #333; }
+        body { margin: 0; overflow: hidden; background: #000; font-family: sans-serif; }
         canvas { display: block; }
-
-        /* UI */
-        #ui { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; color: white; text-shadow: 1px 1px 3px black; }
-        #inventory { position: absolute; top: 20px; left: 20px; display: flex; flex-direction: column; gap: 12px; pointer-events: auto; }
-        .slot { 
-            width: 70px; height: 70px; border: 2px solid #555; background: rgba(0,0,0,0.7); 
-            display: flex; align-items: center; justify-content: center; font-size: 38px; border-radius: 5px; 
-        }
-        .slot.selected { border-color: #00bcd4; box-shadow: 0 0 15px rgba(0,188,212,0.5); background: rgba(0,188,212,0.1); }
-
-        #item-detail { 
-            display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); 
-            width: 350px; background: rgba(0,0,0,0.9); border: 2px solid #00bcd4; padding: 25px; text-align: center; border-radius: 8px; pointer-events: auto; 
-        }
-        
+        #ui { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; color: white; }
+        #inventory { position: absolute; top: 20px; left: 20px; display: flex; flex-direction: column; gap: 10px; pointer-events: auto; }
+        .slot { width: 60px; height: 60px; border: 2px solid #555; background: rgba(0,0,0,0.7); display: flex; align-items: center; justify-content: center; font-size: 30px; border-radius: 8px; }
+        .slot.selected { border-color: #00bcd4; box-shadow: 0 0 10px #00bcd4; }
         #msg-box { position: absolute; bottom: 30px; width: 100%; text-align: center; }
-        #text { 
-            display: inline-block; background: rgba(0,0,0,0.8); padding: 12px 35px; 
-            border-radius: 25px; font-size: 18px; border-left: 4px solid #00bcd4; color: #e0f7fa; font-weight: normal;
-        }
-
-        #guide { 
-            position: absolute; top: 20px; right: 20px; background: rgba(0,0,0,0.8); 
-            padding: 15px; border-radius: 8px; font-size: 13px; border: 1px solid #333; line-height: 1.6;
-        }
-
-        #numpad { 
-            display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); 
-            background: #111; padding: 30px; border: 2px solid #00bcd4; border-radius: 8px; pointer-events: auto; text-align: center; 
-        }
-        input { font-size: 32px; width: 140px; text-align: center; margin-bottom: 20px; background: #000; color: #00bcd4; border: 1px solid #444; outline: none; }
-        button { 
-            padding: 12px 24px; cursor: pointer; background: #00bcd4; border: none; 
-            font-weight: bold; border-radius: 4px; color: #000; margin: 5px; text-transform: uppercase;
-        }
+        #text { display: inline-block; background: rgba(0,0,0,0.8); padding: 10px 30px; border-radius: 20px; border-left: 5px solid #00bcd4; }
+        #guide { position: absolute; top: 20px; right: 20px; background: rgba(0,0,0,0.8); padding: 10px; font-size: 12px; border-radius: 5px; }
     </style>
 </head>
 <body>
@@ -49,421 +21,175 @@
     <div id="inventory">
         <div id="slot-0" class="slot"></div>
         <div id="slot-1" class="slot"></div>
-        <div id="slot-2" class="slot"></div>
     </div>
-
-    <div id="item-detail">
-        <h2 id="detail-name" style="margin:0; color:#00bcd4;">ITEM INFO</h2>
-        <div id="detail-icon" style="font-size:65px; margin:15px;">❓</div>
-        <p id="detail-desc" style="color:#ccc;">詳細</p>
-        <button onclick="closeDetail()">CLOSE</button>
-    </div>
-
-    <div id="guide">
-        <b>CONTROLS</b><br>
-        Move: [W][A][S][D] / Arrows<br>
-        Look: Mouse<br>
-        Interact: Left Click<br>
-        Select Item: [Space]<br>
-        Examine Item: [Enter]<br>
-        Use Item: [Shift]
-    </div>
-
-    <div id="msg-box">
-        <div id="text">Click to start exploration.</div>
-    </div>
-
-    <div id="numpad">
-        <h2 style="color:#00bcd4">SECURITY CODE</h2>
-        <input type="number" id="code-in" placeholder="000"><br>
-        <button onclick="checkSafe()">UNLOCK</button>
-        <button onclick="closeNumpad()" style="background:#555; color:white;">CANCEL</button>
-    </div>
+    <div id="guide">移動: WASD / 視点: マウス / 調べる: クリック / 使う: Shift</div>
+    <div id="msg-box"><div id="text">画面をクリックして開始</div></div>
 </div>
 
-<div style="position:absolute; top:50%; left:50%; width:8px; height:8px; background:#00bcd4; border-radius:50%; transform:translate(-50%,-50%); pointer-events:none; z-index:10; opacity:0.8;"></div>
+<div style="position:absolute; top:50%; left:50%; width:6px; height:6px; background:#00bcd4; border-radius:50%; transform:translate(-50%,-50%); pointer-events:none; opacity:0.7;"></div>
 
 <script type="importmap">
     { "imports": { "three": "https://unpkg.com/three@0.160.0/build/three.module.js" } }
 </script>
+
 <script type="module">
     import * as THREE from 'three';
-    import { GLTFLoader } from 'https://unpkg.com/three@0.160.0/examples/jsm/loaders/GLTFLoader.js';
 
-    const state = { 
-        inv: [], sel: -1, 
-        currentRoom: 1, 
-        room1_buttons_pressed: [],
-        room1_puzzle_solved: false,
-        room2_safe_opened: false,
-        room3_lever_placed: false,
+    // --- 設定と状態 ---
+    const state = { inv: [], sel: -1, currentRoom: 1, room1Solved: false };
+    const items = {
+        key: { name: "鉄の鍵", icon: "🗝️" },
+        handle: { name: "ハンドル", icon: "⚙️" }
     };
 
-    const itemData = {
-        key_room2: { name: "ROOM 2 KEY", icon: "🔑", desc: "古い鉄製の鍵。次の部屋へ繋がるドアを開けられそうだ。" },
-        gears: { name: "ギアセット", icon: "⚙️", desc: "精密なギアのセット。機械に組み込めそうだ。" },
-        final_key: { name: "EXIT KEY", icon: "🗝️", desc: "これでこの閉鎖された空間から脱出できる！" }
-    };
-
-    // --- Scene Setup ---
+    // --- シーン構築 ---
     const scene = new THREE.Scene();
-    const camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 1000);
+    scene.background = new THREE.Color(0x111111);
+
+    const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
     const renderer = new THREE.WebGLRenderer({ antialias: true });
-    renderer.setPixelRatio(window.devicePixelRatio);
     renderer.setSize(window.innerWidth, window.innerHeight);
-    renderer.shadowMap.enabled = true; // 影を有効化
-    renderer.shadowMap.type = THREE.PCFSoftShadowMap; // 柔らかい影
+    renderer.setPixelRatio(window.devicePixelRatio);
+    renderer.shadowMap.enabled = true;
     document.body.appendChild(renderer.domElement);
 
-    // 環境マップ
-    scene.background = new THREE.Color(0x333333); // 暗めの背景色
-    const pmremGenerator = new THREE.PMREMGenerator(renderer);
-    pmremGenerator.compileEquirectangularShader();
-    scene.environment = pmremGenerator.fromScene(scene).texture; // 環境光による反射
+    // 照明 (リアルな影のため)
+    const ambient = new THREE.AmbientLight(0xffffff, 0.4);
+    scene.add(ambient);
+    const light = new THREE.PointLight(0xffffff, 50, 20);
+    light.position.set(0, 5, 0);
+    light.castShadow = true;
+    scene.add(light);
 
-    // 照明
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.3); // 全体的な環境光を抑える
-    scene.add(ambientLight);
-    const mainLight = new THREE.DirectionalLight(0xffffff, 0.8);
-    mainLight.position.set(5, 10, 5);
-    mainLight.castShadow = true;
-    mainLight.shadow.mapSize.width = 1024;
-    mainLight.shadow.mapSize.height = 1024;
-    mainLight.shadow.camera.near = 0.5;
-    mainLight.shadow.camera.far = 50;
-    mainLight.shadow.camera.left = -10;
-    mainLight.shadow.camera.right = 10;
-    mainLight.shadow.camera.top = 10;
-    mainLight.shadow.camera.bottom = -10;
-    scene.add(mainLight);
-
-    // 各部屋にスポットライトを追加
-    function addRoomLights(roomGroup) {
-        const spotLight = new THREE.SpotLight(0xffffff, 10, 15, Math.PI / 6, 0.5, 2);
-        spotLight.position.set(0, 7, 0); // 部屋の中央上部
-        spotLight.target.position.set(0, 0, 0);
-        spotLight.castShadow = true;
-        spotLight.shadow.mapSize.width = 512;
-        spotLight.shadow.mapSize.height = 512;
-        roomGroup.add(spotLight);
-        roomGroup.add(spotLight.target); // ターゲットを部屋グループに追加
-    }
-
-    const roomSize = 14;
-    const roomHeight = 8;
-    const roomSpacing = 25;
-
-    // --- 部屋作成関数 ---
-    function createRoom(id, offsetX, wallColor, floorTexture) {
+    // --- リアルな「棚」の作成 ---
+    function createShelf(x, z, parent) {
         const group = new THREE.Group();
-        group.position.x = offsetX;
-        group.name = `roomGroup_${id}`;
+        const mat = new THREE.MeshStandardMaterial({ color: 0x4a2c1a, roughness: 0.7 });
+        
+        // 背板
+        const back = new THREE.Mesh(new THREE.BoxGeometry(2, 4, 0.1), mat);
+        back.position.set(0, 2, 0);
+        group.add(back);
 
-        // 壁
-        const wallMaterial = new THREE.MeshStandardMaterial({ color: wallColor, side: THREE.BackSide, roughness: 0.7, metalness: 0.1 });
-        const wallMesh = new THREE.Mesh(new THREE.BoxGeometry(roomSize, roomHeight, roomSize), wallMaterial);
-        wallMesh.position.y = roomHeight / 2;
-        wallMesh.receiveShadow = true;
-        group.add(wallMesh);
+        // 棚板 (3枚)
+        for(let i=0; i<=2; i++) {
+            const plate = new THREE.Mesh(new THREE.BoxGeometry(2, 0.1, 0.8), mat);
+            plate.position.set(0, i * 1.5 + 0.5, 0.4);
+            plate.receiveShadow = true;
+            group.add(plate);
+        }
 
-        // 床
-        const floorMaterial = new THREE.MeshStandardMaterial({ color: 0x555555, roughness: 0.8, metalness: 0.1 });
-        const floorMesh = new THREE.Mesh(new THREE.PlaneGeometry(roomSize, roomSize), floorMaterial);
-        floorMesh.rotation.x = -Math.PI / 2;
-        floorMesh.receiveShadow = true;
-        group.add(floorMesh);
+        // 側板
+        const sideL = new THREE.Mesh(new THREE.BoxGeometry(0.1, 4, 0.8), mat);
+        sideL.position.set(-1, 2, 0.4);
+        group.add(sideL);
+        const sideR = new THREE.Mesh(new THREE.BoxGeometry(0.1, 4, 0.8), mat);
+        sideR.position.set(1, 2, 0.4);
+        group.add(sideR);
 
-        addRoomLights(group); // 部屋ごとにスポットライトを追加
-        scene.add(group);
+        group.position.set(x, 0, z);
+        parent.add(group);
         return group;
     }
 
-    // --- オブジェクト作成ヘルパー (詳細化) ---
-    function makeDetailedObj(w, h, d, x, y, z, col, name, parent, rotationY = 0, roughness = 0.5, metalness = 0.1) {
-        const material = new THREE.MeshStandardMaterial({ color: col, roughness: roughness, metalness: metalness });
-        const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), material);
-        mesh.position.set(x, y + h / 2, z);
-        mesh.rotation.y = rotationY;
-        mesh.name = name;
-        mesh.castShadow = true;
-        mesh.receiveShadow = true;
-        parent.add(mesh);
-        return mesh;
-    }
+    // 部屋の作成
+    const room = new THREE.Mesh(
+        new THREE.BoxGeometry(15, 8, 15),
+        new THREE.MeshStandardMaterial({ color: 0x555555, side: THREE.BackSide })
+    );
+    room.position.y = 4;
+    scene.add(room);
 
-    // --- リアルな棚の作成 ---
-    function createShelf(x, z, parent, name = "shelf") {
-        const shelfGroup = new THREE.Group();
-        shelfGroup.position.set(x, 0, z);
-        shelfGroup.name = name; // 親グループに名前を付ける
+    // 家具配置
+    const shelf = createShelf(-6, -3, scene);
+    shelf.name = "shelf";
 
-        // 側面
-        makeDetailedObj(0.2, 5, 1.5, -0.7, 0, 0, 0x8B4513, `${name}_side1`, shelfGroup, 0, 0.6, 0);
-        makeDetailedObj(0.2, 5, 1.5, 0.7, 0, 0, 0x8B4513, `${name}_side2`, shelfGroup, 0, 0.6, 0);
-        // 上下板
-        makeDetailedObj(1.6, 0.2, 1.5, 0, 0, 0, 0x8B4513, `${name}_top`, shelfGroup, 0, 0.6, 0);
-        makeDetailedObj(1.6, 0.2, 1.5, 0, 4.8, 0, 0x8B4513, `${name}_bottom`, shelfGroup, 0, 0.6, 0);
-        // 中間棚板
-        makeDetailedObj(1.6, 0.15, 1.4, 0, 1.6, 0, 0x8B4513, `${name}_shelf1`, shelfGroup, 0, 0.6, 0);
-        makeDetailedObj(1.6, 0.15, 1.4, 0, 3.2, 0, 0x8B4513, `${name}_shelf2`, shelfGroup, 0, 0.6, 0);
-        
-        // 装飾的な本
-        makeDetailedObj(0.4, 1.0, 0.1, -0.4, 3.4, 0.5, 0x4a148c, `${name}_book1`, shelfGroup);
-        makeDetailedObj(0.3, 1.2, 0.1, 0.1, 3.4, 0.5, 0x1a237e, `${name}_book2`, shelfGroup);
-        makeDetailedObj(0.5, 0.8, 0.1, 0.4, 1.8, 0.5, 0xad1457, `${name}_book3`, shelfGroup);
+    const door = new THREE.Mesh(new THREE.BoxGeometry(2, 5, 0.2), new THREE.MeshStandardMaterial({color: 0x332211}));
+    door.position.set(0, 2.5, -7.4);
+    door.name = "door";
+    scene.add(door);
 
-        parent.add(shelfGroup);
-        return shelfGroup;
-    }
+    camera.position.set(0, 3, 5);
 
-    // --- リアルなドアの作成 ---
-    function createDoor(x, z, parent, name, rotationY, lockedColor = 0x607d8b, unlockedColor = 0x90a4ae) {
-        const doorGroup = new THREE.Group();
-        doorGroup.position.set(x, 0, z);
-        doorGroup.rotation.y = rotationY;
-        doorGroup.name = name;
-
-        // ドア本体
-        const doorBody = makeDetailedObj(2.5, 5.5, 0.1, 0, 0, 0, lockedColor, `${name}_body`, doorGroup, 0, 0.6, 0.1);
-        
-        // ドアノブ
-        const knobBase = makeDetailedObj(0.1, 0.1, 0.1, 0.8, 3, 0.05, 0x8d6e63, `${name}_knob_base`, doorBody, 0, 0.3, 0.8);
-        const knobHandle = makeDetailedObj(0.05, 0.3, 0.05, 0.85, 3, 0.05, 0x795548, `${name}_knob_handle`, doorBody, Math.PI/2, 0.3, 0.8);
-
-        // 鍵穴
-        const keyhole = makeDetailedObj(0.05, 0.1, 0.05, 0.7, 2.5, 0.05, 0x212121, `${name}_keyhole`, doorBody, 0, 0.1, 0.9);
-        
-        parent.add(doorGroup);
-        return doorGroup;
-    }
-    
-    // --- リアルな金庫の作成 ---
-    function createSafe(x, y, z, parent, name = "safe") {
-        const safeGroup = new THREE.Group();
-        safeGroup.position.set(x, y, z);
-        safeGroup.name = name;
-
-        // 本体
-        const body = makeDetailedObj(0.7, 0.7, 0.7, 0, 0, 0, 0x455a64, `${name}_body`, safeGroup, 0, 0.3, 0.7);
-        // ドア部分
-        const door = makeDetailedObj(0.6, 0.6, 0.1, 0, 0, 0.35, 0x546e7a, `${name}_door`, body, 0, 0.2, 0.8);
-        // ダイヤル
-        const dialBase = makeDetailedObj(0.15, 0.15, 0.05, 0, 0.1, 0.05, 0x212121, `${name}_dial_base`, door, 0, 0.1, 0.9);
-        const dialKnob = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.03, 16), new THREE.MeshStandardMaterial({color: 0xcccccc, roughness: 0.2, metalness: 0.8}));
-        dialKnob.position.set(0, 0.1, 0.08);
-        dialBase.add(dialKnob);
-        // レバー
-        const leverShaft = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.15, 8), new THREE.MeshStandardMaterial({color: 0x8d6e63, roughness: 0.3, metalness: 0.7}));
-        leverShaft.position.set(0.15, 0.1, 0.05);
-        door.add(leverShaft);
-        const leverHandle = makeDetailedObj(0.08, 0.08, 0.08, 0.15, 0.18, 0.05, 0x795548, `${name}_lever_handle`, door, 0, 0.3, 0.8);
-
-        parent.add(safeGroup);
-        return safeGroup;
-    }
-
-    // --- リアルなボタンの作成 ---
-    function createButton(x, y, z, parent, name, color) {
-        const buttonGroup = new THREE.Group();
-        buttonGroup.position.set(x, y, z);
-        buttonGroup.name = name;
-
-        const base = makeDetailedObj(0.25, 0.1, 0.25, 0, 0, 0, 0x333333, `${name}_base`, buttonGroup, 0, 0.2, 0.8);
-        const cap = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 0.1, 16), new THREE.MeshStandardMaterial({color: color, roughness: 0.4, metalness: 0.1}));
-        cap.position.y = 0.1;
-        cap.name = `${name}_cap`; // レイキャスト用
-        base.add(cap);
-        parent.add(buttonGroup);
-        return buttonGroup;
-    }
-
-    // --- リアルな時計の作成 ---
-    function createClock(x, y, z, parent, name = "clock") {
-        const clockGroup = new THREE.Group();
-        clockGroup.position.set(x, y, z);
-        clockGroup.rotation.y = Math.PI / 2; // 壁に貼り付ける
-        clockGroup.name = name;
-
-        const frame = makeDetailedObj(0.8, 0.8, 0.1, 0, 0, 0, 0x8d6e63, `${name}_frame`, clockGroup, 0, 0.5, 0.1);
-        const face = makeDetailedObj(0.7, 0.7, 0.05, 0, 0, 0.05, 0xffffff, `${name}_face`, frame, 0, 0.9, 0);
-
-        // 針
-        const hourHand = makeDetailedObj(0.04, 0.2, 0.02, 0.0, 0.1, 0.08, 0x212121, `${name}_hour`, face);
-        hourHand.rotation.z = -Math.PI * 0.75; // 9時
-        const minuteHand = makeDetailedObj(0.04, 0.3, 0.02, 0.0, 0.15, 0.08, 0x212121, `${name}_minute`, face);
-        minuteHand.rotation.z = -Math.PI * 0.1; // 12時5分
-        // 9時05分
-
-        parent.add(clockGroup);
-        return clockGroup;
-    }
-
-    // --- 部屋のインスタンス化 ---
-    const room1 = createRoom(1, 0, 0x424242); // 部屋1の壁色
-    const room2 = createRoom(2, roomSpacing, 0x546e7a); // 部屋2の壁色
-    const room3 = createRoom(3, roomSpacing * 2, 0x607d8b); // 部屋3の壁色
-
-    // --- 部屋1の家具 ---
-    createShelf(-6.2, 0, room1, "shelf_r1"); // リアルな棚
-    createButton(0, 3, -6.9, room1, "btn_red", 0xd32f2f); // 赤ボタン
-    createButton(2, 3, -6.9, room1, "btn_blue", 0x1976d2); // 青ボタン
-    createDoor(6.95, 0, room1, "door_1_2", Math.PI / 2); // ドア
-
-    // --- 部屋2の家具 ---
-    makeDetailedObj(3, 1.2, 2, 5.5, 0, 4, 0x424242, "desk_r2", room2, 0, 0.4, 0.1); // デスク
-    createSafe(5.5, 1.2, 4, room2, "safe_r2"); // リアルな金庫
-    createClock(-6.9, 4, 0, room2, "clock_r2"); // リアルな時計
-    createDoor(-6.95, 0, room2, "door_2_1", Math.PI / 2); // ドア
-    createDoor(6.95, 0, room2, "door_2_3", Math.PI / 2); // ドア
-
-    // --- 部屋3の家具 ---
-    makeDetailedObj(1, 2, 1, 0, 0, -5, 0x757575, "pedestal_r3", room3, 0, 0.6, 0.5); // 台座
-    createDoor(6.95, 0, room3, "door_exit", Math.PI / 2); // 脱出ドア
-    createDoor(-6.95, 0, room3, "door_3_2", Math.PI / 2); // ドア
-
-    camera.position.set(0, 3, 5); // 初期位置
-
-    // --- Player Controls ---
+    // --- 操作ロジック ---
     const keys = {};
     let yaw = 0, pitch = 0;
 
-    window.addEventListener('keydown', e => { 
-        keys[e.code] = true;
-        if(e.code === 'Space') cycleItem();
-        if(e.code === 'Enter') showItemDetail();
-        if(e.code === 'ShiftLeft' || e.code === 'ShiftRight') useItem();
-    });
+    window.addEventListener('keydown', e => { keys[e.code] = true; if(e.code === 'Space') cycleItem(); });
     window.addEventListener('keyup', e => { keys[e.code] = false; });
 
     renderer.domElement.addEventListener('click', () => {
-        if(document.getElementById('numpad').style.display !== 'block' && 
-           document.getElementById('item-detail').style.display !== 'block') {
-            renderer.domElement.requestPointerLock();
-        }
+        renderer.domElement.requestPointerLock();
     });
 
     document.addEventListener('mousemove', e => {
         if (document.pointerLockElement === renderer.domElement) {
             yaw -= e.movementX * 0.002;
             pitch -= e.movementY * 0.002;
-            pitch = Math.max(-Math.PI/2.2, Math.min(Math.PI/2.2, pitch));
+            pitch = Math.max(-Math.PI/2, Math.min(Math.PI/2, pitch));
         }
     });
 
-    function moveLoop() {
+    // メインループ
+    function animate() {
         if (document.pointerLockElement === renderer.domElement) {
-            const moveVec = new THREE.Vector3();
-            const forward = new THREE.Vector3(-Math.sin(yaw), 0, -Math.cos(yaw));
-            const right = new THREE.Vector3().crossVectors(forward, new THREE.Vector3(0, 1, 0));
-
-            if (keys['ArrowUp'] || keys['KeyW']) moveVec.add(forward);
-            if (keys['ArrowDown'] || keys['KeyS']) moveVec.sub(forward);
-            if (keys['ArrowLeft'] || keys['KeyA']) moveVec.sub(right);
-            if (keys['ArrowRight'] || keys['KeyD']) moveVec.add(right);
-
-            if (moveVec.length() > 0) {
-                moveVec.normalize().multiplyScalar(0.12);
-                const nextX = camera.position.x + moveVec.x;
-                const nextZ = camera.position.z + moveVec.z;
-                
-                const roomCenter = (state.currentRoom - 1) * roomSpacing;
-                const limit = (roomSize / 2) - 0.8;
-                if (Math.abs(nextX - roomCenter) < limit) camera.position.x = nextX;
-                if (Math.abs(nextZ) < limit) camera.position.z = nextZ;
-            }
+            const f = new THREE.Vector3(-Math.sin(yaw), 0, -Math.cos(yaw)).multiplyScalar(0.1);
+            const r = new THREE.Vector3(Math.cos(yaw), 0, -Math.sin(yaw)).multiplyScalar(0.1);
+            if (keys['KeyW']) camera.position.add(f);
+            if (keys['KeyS']) camera.position.sub(f);
+            if (keys['KeyA']) camera.position.sub(r);
+            if (keys['KeyD']) camera.position.add(r);
         }
         camera.rotation.set(pitch, yaw, 0, 'YXZ');
         renderer.render(scene, camera);
-        requestAnimationFrame(moveLoop);
+        requestAnimationFrame(animate);
     }
-    moveLoop();
+    animate();
 
-    // --- Interactions ---
-    window.addEventListener('mousedown', (event) => {
+    // クリック判定
+    window.addEventListener('mousedown', () => {
         if (document.pointerLockElement !== renderer.domElement) return;
-        const raycaster = new THREE.Raycaster();
-        raycaster.setFromCamera(new THREE.Vector2(0, 0), camera);
-        const intersects = raycaster.intersectObjects(scene.children, true);
+        const ray = new THREE.Raycaster();
+        ray.setFromCamera(new THREE.Vector2(0,0), camera);
+        const hit = ray.intersectObjects(scene.children, true);
 
-        if (intersects.length > 0 && intersects[0].distance < 4) {
-            let targetName = intersects[0].object.name;
-            
-            // レイキャストがサブオブジェクトに当たった場合、親オブジェクトの名前を取得
-            if (targetName.includes("_cap") || targetName.includes("_body") || targetName.includes("_knob") || targetName.includes("_keyhole")) {
-                 targetName = intersects[0].object.parent.name;
-            } else if (targetName.includes("_side") || targetName.includes("_shelf") || targetName.includes("_book")) {
-                 targetName = intersects[0].object.parent.name; // 棚の親グループ
-            } else if (targetName.includes("_hour") || targetName.includes("_minute") || targetName.includes("_face") || targetName.includes("_frame")) {
-                 targetName = intersects[0].object.parent.name; // 時計の親グループ
-            }
+        if (hit.length > 0 && hit[0].distance < 5) {
+            const obj = hit[0].object;
+            // 親を遡って名前を確認
+            let target = obj;
+            while(target.parent && !target.name) target = target.parent;
 
-
-            if (state.currentRoom === 1) {
-                if (targetName === "shelf_r1") {
-                    notify("古びた本が並んでいる棚だ。");
-                } else if (targetName === "btn_red") {
-                    state.room1_buttons_pressed.push("R");
-                    notify("赤いボタンがカチッと音を立てた。");
-                    checkRoom1Puzzle();
-                } else if (targetName === "btn_blue") {
-                    state.room1_buttons_pressed.push("B");
-                    notify("青いボタンがカチッと音を立てた。");
-                    checkRoom1Puzzle();
-                } else if (targetName === "door_1_2") {
-                    if (state.inv.includes("key_room2")) {
-                        notify("ドアのロックが解除された！"); // 鍵を使った後のメッセージ
-                        // 鍵が使われた後にドアを開けるロジック
-                        // 実際の移動はuseItemで処理
-                    } else {
-                        notify("ドアは施錠されている。どこかに鍵があるはずだ。");
-                    }
+            if (target.name === "shelf") {
+                if(!state.inv.includes("key")) {
+                    state.inv.push("key");
+                    notify("棚の間から「鉄の鍵」を見つけた！");
+                    updateUI();
                 }
-            } else if (state.currentRoom === 2) {
-                if (targetName === "desk_r2") {
-                    notify("簡素なデスクだ。");
-                } else if (targetName === "safe_r2") {
-                    if (!state.room2_safe_opened) {
-                        document.exitPointerLock();
-                        document.getElementById('numpad').style.display = 'block';
-                    } else {
-                        notify("金庫はすでに開いている。中身は空だ。");
-                    }
-                } else if (targetName === "clock_r2") {
-                    notify("時計の針は9時05分を指している。"); // 新しい時刻のヒント
-                } else if (targetName === "door_2_1") {
-                    moveRoom(1);
-                } else if (targetName === "door_2_3") {
-                    if (state.room2_safe_opened) { // 金庫が開いたら次の部屋へ行ける
-                        moveRoom(3);
-                    } else {
-                        notify("このドアは金庫のギミックと連動しているようだ。");
-                    }
+            } else if (target.name === "door") {
+                if(state.inv[state.sel] === "key") {
+                    notify("鍵が開いた！脱出成功！");
+                    target.position.y += 5; // ドアが上がる
+                } else {
+                    notify("鍵がかかっているようだ。");
                 }
-            } else if (state.currentRoom === 3) {
-                 if (targetName === "pedestal_r3") {
-                    notify(state.room3_lever_placed ? "ギアがはめ込まれている台座だ。" : "機械がはまりそうな台座がある。");
-                 } else if (targetName === "door_3_2") {
-                     moveRoom(2);
-                 } else if (targetName === "door_exit") {
-                     notify("最終脱出ドアだ。厳重なロックがかかっている。");
-                 }
             }
-            updateUI();
         }
     });
 
-    // --- Use Item (Shift key) ---
-    function useItem() {
-        if (document.pointerLockElement !== renderer.domElement || state.sel === -1) return;
-        const heldItem = state.inv[state.sel];
-        const raycaster = new THREE.Raycaster();
-        raycaster.setFromCamera(new THREE.Vector2(0, 0), camera);
-        const intersects = raycaster.intersectObjects(scene.children, true);
-
-        if (intersects.length > 0 && intersects[0].distance < 4) {
-            let targetName = intersects[0].object.name;
-            if (targetName.includes("_body") || targetName.includes("_knob") || targetName.includes("_keyhole")) {
-                 targetName = intersects[0].object.parent.name;
-            } else if (targetName.includes("_cap")) {
-                 targetName = intersects[0].object.parent.name;
-            } else if (targetName.includes("_side") || targetName
+    function notify(t) { document.getElementById('text').innerText = t; }
+    function updateUI() {
+        for(let i=0; i<2; i++) {
+            const s = document.getElementById(`slot-${i}`);
+            s.innerHTML = state.inv[i] ? items[state.inv[i]].icon : "";
+            s.classList.toggle('selected', i === state.sel);
+        }
+    }
+    function cycleItem() {
+        if(state.inv.length > 0) {
+            state.sel = (state.sel + 1) % state.inv.length;
+            updateUI();
+        }
+    }
+</script>
+</body>
+</html>
