@@ -3,65 +3,80 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>3D ESCAPE - THE CUBE</title>
+    <title>3D Escape - Standard Room</title>
     <style>
         :root {
-            --wall-color: #1a1a2e;
-            --floor-color: #16213e;
-            --accent: #00d2ff;
+            --wall: #f4f1ea; /* 温かみのある白 */
+            --floor: #8b5a2b; /* フローリング風 */
+            --accent: #2c3e50;
         }
-        body, html { margin: 0; padding: 0; height: 100vh; background: #000; color: #fff; font-family: sans-serif; overflow: hidden; }
+        body, html { margin: 0; padding: 0; height: 100vh; background: #333; color: #333; font-family: "Helvetica Neue", Arial, sans-serif; overflow: hidden; }
         
-        /* 3D Viewport */
+        /* 3D 空間の設定 */
         #viewport {
-            width: 100vw; height: 60vh;
-            perspective: 800px;
-            overflow: hidden;
-            background: radial-gradient(circle, #222, #000);
+            width: 100vw; height: 50vh;
+            perspective: 1000px;
+            background: #aad; /* 窓の外の空の色 */
             display: flex; align-items: center; justify-content: center;
+            overflow: hidden;
         }
 
         #world {
-            width: 300px; height: 300px;
+            width: 400px; height: 400px;
             transform-style: preserve-3d;
-            transition: transform 0.5s ease-in-out;
+            transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
-        /* 部屋の壁 */
         .wall {
-            position: absolute; width: 300px; height: 300px;
-            border: 2px solid var(--accent);
-            background: rgba(26, 26, 46, 0.8);
+            position: absolute; width: 400px; height: 400px;
+            border: 1px solid #ddd;
             display: flex; flex-direction: column; align-items: center; justify-content: center;
             backface-visibility: hidden;
         }
 
-        /* 壁の配置 */
-        .front  { transform: translateZ(150px); }
-        .back   { transform: rotateY(180deg) translateZ(150px); }
-        .left   { transform: rotateY(-90deg) translateZ(150px); }
-        .right  { transform: rotateY(90deg) translateZ(150px); }
-        .floor  { transform: rotateX(-90deg) translateZ(150px); background: #111; }
+        /* 壁の装飾と配置 */
+        .front  { transform: translateZ(200px); background: var(--wall); }
+        .back   { transform: rotateY(180deg) translateZ(200px); background: var(--wall); }
+        .left   { transform: rotateY(-90deg) translateZ(200px); background: #ebe8e0; }
+        .right  { transform: rotateY(90deg) translateZ(200px); background: #ebe8e0; }
+        .floor  { transform: rotateX(-90deg) translateZ(200px); background: var(--floor); box-shadow: inset 0 0 100px rgba(0,0,0,0.2); }
+        .ceiling { transform: rotateX(90deg) translateZ(200px); background: #fff; }
 
-        /* オブジェクトのデザイン */
-        .obj-symbol { font-size: 3rem; cursor: pointer; filter: drop-shadow(0 0 10px var(--accent)); }
-        .msg-pop { font-size: 0.8rem; margin-top: 10px; color: var(--accent); text-align: center; padding: 0 10px; }
+        /* 家具のシンボル */
+        .obj { font-size: 5rem; cursor: pointer; transition: 0.2s; user-select: none; }
+        .obj:hover { transform: scale(1.1); }
+        .label { font-weight: bold; margin-top: 10px; background: rgba(255,255,255,0.8); padding: 2px 10px; border-radius: 10px; font-size: 0.8rem; }
 
         /* UIエリア */
-        #ui { height: 40vh; background: #111; padding: 15px; box-sizing: border-box; display: flex; flex-direction: column; border-top: 2px solid #333; }
-        #log { flex: 1; background: #000; padding: 10px; font-size: 0.9rem; border-radius: 5px; margin-bottom: 10px; border: 1px solid #444; overflow-y: auto; }
+        #ui { height: 50vh; background: #fff; display: flex; flex-direction: column; }
+        #log { flex: 1; padding: 15px; font-size: 0.95rem; border-bottom: 1px solid #eee; overflow-y: auto; line-height: 1.6; }
         
-        .controls { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 10px; }
-        .ctrl-btn { background: #333; color: #fff; border: none; padding: 12px; border-radius: 5px; font-weight: bold; }
-        .ctrl-btn:active { background: var(--accent); }
+        /* 十字キー / コントローラー */
+        .controller {
+            display: grid;
+            grid-template-columns: 60px 60px 60px;
+            grid-template-rows: 50px 50px;
+            gap: 10px;
+            justify-content: center;
+            padding: 20px;
+            background: #f9f9f9;
+        }
+        .btn {
+            background: #eee; border: 1px solid #ccc; border-radius: 8px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.2rem; cursor: pointer; user-select: none;
+        }
+        .btn:active { background: #ddd; transform: translateY(2px); }
+        .btn-large { grid-column: span 3; background: var(--accent); color: #fff; font-size: 0.9rem; font-weight: bold; margin-top: 5px;}
 
-        #input-area { display: flex; gap: 5px; }
-        input { flex: 1; padding: 10px; background: #222; border: 1px solid var(--accent); color: #fff; border-radius: 5px; text-align: center; font-size: 1.2rem; }
-        #hint-btn { background: #442222; color: #ffaa00; border: none; padding: 10px; border-radius: 5px; margin-top: 5px; font-size: 0.8rem; }
+        /* 入力ボックス */
+        #input-box { padding: 10px 20px; display: flex; gap: 10px; background: #f9f9f9; }
+        input { flex: 1; padding: 12px; border: 2px solid #ddd; border-radius: 5px; font-size: 1.2rem; text-align: center; }
 
-        #clear-screen {
+        /* クリア画面 */
+        #clear {
             position: fixed; top:0; left:0; width:100%; height:100%;
-            background: #fff; color: #000; display: none;
+            background: rgba(255,255,255,0.95); display: none;
             flex-direction: column; justify-content: center; align-items: center; z-index: 100;
         }
     </style>
@@ -71,94 +86,37 @@
 <div id="viewport">
     <div id="world">
         <div class="wall front">
-            <div class="obj-symbol" onclick="interact('door')">🚪</div>
-            <div class="msg-pop">EXIT DOOR</div>
+            <div class="obj" onclick="interact('door')">🚪</div>
+            <div class="label">出口のドア</div>
         </div>
         <div class="wall back">
-            <div class="obj-symbol" onclick="interact('shelf')">📚</div>
-            <div class="msg-pop">古びた本棚</div>
+            <div class="obj" onclick="interact('desk')">🛋️</div>
+            <div class="label">ソファ</div>
         </div>
         <div class="wall left">
-            <div class="obj-symbol" onclick="interact('math')">🔢</div>
-            <div class="msg-pop">壁の落書き</div>
+            <div class="obj" onclick="interact('plant')">🪴</div>
+            <div class="label">観葉植物</div>
         </div>
         <div class="wall right">
-            <div class="obj-symbol" onclick="interact('mirror')">🪞</div>
-            <div class="msg-pop">曇った鏡</div>
+            <div class="obj" onclick="interact('shelf')">📦</div>
+            <div class="label">収納ボックス</div>
         </div>
         <div class="wall floor"></div>
+        <div class="wall ceiling"></div>
     </div>
 </div>
 
 <div id="ui">
-    <div id="log">3Dの部屋に閉じ込められた。左右のボタンで部屋を見渡し、4桁のコードを探せ。</div>
+    <div id="log">普通の部屋に閉じ込められたようだ。矢印ボタンで周囲を調べ、脱出用の4桁の暗証番号を見つけよう。</div>
     
-    <div class="controls">
-        <button class="ctrl-btn" onclick="rotate(-90)">◀ LEFT</button>
-        <button class="ctrl-btn" onclick="rotate(180)">BACK</button>
-        <button class="ctrl-btn" onclick="rotate(90)">RIGHT ▶</button>
+    <div id="input-box">
+        <input type="number" id="pass" placeholder="0000">
     </div>
 
-    <div id="input-area">
-        <input type="number" id="ans" placeholder="PASSCODE">
-        <button class="ctrl-btn" style="background:var(--accent)" onclick="checkClear()">ENTER</button>
-    </div>
-    <button id="hint-btn" onclick="showHint()">HINT を見る</button>
-</div>
-
-<div id="clear-screen">
-    <h1>ESCAPE SUCCESS</h1>
-    <p>よした、君の知能が勝った！</p>
-    <button onclick="location.reload()" style="padding:10px 20px;">再挑戦</button>
-</div>
-
-<script>
-    let currentRotation = 0;
-    let hintCount = 0;
-
-    function rotate(deg) {
-        currentRotation += deg;
-        document.getElementById('world').style.transform = `rotateY(${currentRotation}deg)`;
-        addLog("視点を移動した。");
-    }
-
-    function addLog(msg) {
-        const log = document.getElementById('log');
-        log.innerHTML = msg + "<br>" + log.innerHTML;
-    }
-
-    function interact(target) {
-        if (target === 'door') {
-            addLog("ドア：頑丈なロックがかかっている。4桁の数字が必要だ。");
-        } else if (target === 'shelf') {
-            addLog("本棚：『一、十、百、千…単位が重なる時、力は増す』と書かれた本がある。");
-        } else if (target === 'math') {
-            addLog("壁：『1+1=2, 2+2=4, 4+4=8, 8+8=？』という書きかけの数式がある。");
-        } else if (target === 'mirror') {
-            addLog("鏡：自分の顔が映っている。鏡の中では『右は左、左は右』だ。");
-        }
-    }
-
-    function showHint() {
-        const hints = [
-            "ヒント1：壁の数式 8+8=16 だが、コードは4桁だ。",
-            "ヒント2：鏡の法則『左右反転』を 16 に適応してみよう。",
-            "ヒント3：16を鏡に映すと「61」に見える。本棚の『重なる』は、元の数字と鏡の数字を繋げるという意味だ。"
-        ];
-        alert(hints[hintCount % hints.length]);
-        hintCount++;
-    }
-
-    function checkClear() {
-        const val = document.getElementById('ans').value;
-        // 正解：1661
-        // 解説：壁の答え 16。鏡の法則で 61。これらを繋げて 1661。
-        if (val === "1661") {
-            document.getElementById('clear-screen').style.display = 'flex';
-        } else {
-            addLog("<span style='color:red'>警告：パスコードが正しくありません。</span>");
-        }
-    }
-</script>
-</body>
-</html>
+    <div class="controller">
+        <div></div>
+        <div class="btn" onclick="rotate(180)">↑</div>
+        <div></div>
+        <div class="btn" onclick="rotate(-90)">←</div>
+        <div class="btn" onclick="rotate(0)">●</div>
+        <div class="btn" onclick="rotate(90)">→</div>
