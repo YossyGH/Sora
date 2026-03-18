@@ -116,4 +116,47 @@
         const step = 200; // 1マスの移動距離
         if (dir === 'f') {
             posX += Math.sin(rad) * step;
-            pos
+            posZ += Math.cos(rad) * step;
+        } else {
+            posX -= Math.sin(rad) * step;
+            posZ -= Math.cos(rad) * step;
+        }
+        
+        // 部屋の範囲外に出ないように制限
+        posX = Math.max(-100, Math.min(100, posX));
+        posZ = Math.max(-100, Math.min(100, posZ));
+        
+        updateCamera();
+        msgEl.innerText = "歩いて移動した。";
+    }
+
+    function turn(dir) {
+        rotY += (dir === 'r') ? -90 : 90;
+        updateCamera();
+        msgEl.innerText = "向きを変えた。";
+    }
+
+    function check() {
+        // 向いている方向(rotY)と位置によって、調べる対象を変える
+        const angle = ((rotY % 360) + 360) % 360;
+        const inputCode = document.getElementById('code').value;
+
+        if (angle === 0 && posZ > 50) { // 正面：ドア
+            if (inputCode === "3650") {
+                document.getElementById('clear').style.display = 'flex';
+            } else {
+                msgEl.innerText = "ドア：暗証番号が必要だ。ヒントを部屋から探せ。";
+            }
+        } else if (angle === 90) { // 左：本棚
+            msgEl.innerText = "本棚：『一年は「365」日、最後は「0」で締めくくる』";
+        } else if (angle === 180) { // 後ろ：絵
+            msgEl.innerText = "絵：三角形が描いてある。それ以外に不自然な点はない。";
+        } else if (angle === 270) { // 右：植物
+            msgEl.innerText = "植物：土の中に何も隠されていない。ただの植物だ。";
+        } else {
+            msgEl.innerText = "ここには何もないようだ。";
+        }
+    }
+</script>
+</body>
+</html>
