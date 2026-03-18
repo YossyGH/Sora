@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <title>3D Escape - The Secret Mechanism</title>
+    <title>3D Escape - The Interconnected Rooms</title>
     <style>
         body { margin: 0; overflow: hidden; font-family: 'Segoe UI', sans-serif; background: #222; }
         canvas { display: block; }
@@ -71,15 +71,20 @@
 <script type="module">
     import * as THREE from 'three';
 
-    const state = { inv: [], sel: -1, solved: false, pedestalUsed: false };
+    const state = { 
+        inv: [], sel: -1, 
+        currentRoom: 1, // 現在の部屋 1, 2, 3
+        solvedRoom1: false,
+        solvedRoom2: false,
+        room1ButtonsPressed: [], // 部屋1のボタン順序
+    };
     const itemData = {
-        box_item: { name: "謎の小箱", icon: "📦", desc: "頑丈な小箱だ。振ると中で音がする。Enterで詳しく見てみよう。" },
-        note: { name: "古びたメモ", icon: "📜", desc: "『最初の数字は 3。残りは金庫の裏に…』とある。" },
-        handle: { name: "重いレバー", icon: "🕹️", desc: "台座に設置できそうなレバーだ。" },
-        key: { name: "マスターキー", icon: "🔑", desc: "光り輝く鍵。これで脱出できる。" }
+        key_r2: { name: "部屋2の鍵", icon: "🗝️", desc: "古びた鍵。次の部屋へ行けそうだ。" },
+        lever_part: { name: "レバー部品", icon: "🔩", desc: "何かの機械にはまりそうな部品。Enterで詳しく見てみよう。" },
+        final_key: { name: "最終鍵", icon: "🔑", desc: "これで脱出できるはず！" }
     };
 
-    // --- シーン構築 (鮮明化) ---
+    // --- Scene Setup ---
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(0xcccccc); 
 
@@ -97,39 +102,79 @@
     sun.castShadow = true;
     scene.add(sun);
 
-    // 部屋
+    // --- 部屋オブジェクト管理 ---
     const roomSize = 15;
-    const room = new THREE.Mesh(
-        new THREE.BoxGeometry(roomSize, 8, roomSize),
-        new THREE.MeshStandardMaterial({ color: 0xeeeeee, side: THREE.BackSide })
-    );
-    room.position.y = 4;
-    room.receiveShadow = true;
-    scene.add(room);
+    const roomHeight = 8;
+    const roomSpacing = 20; // 部屋と部屋の間隔
+    const rooms = {};
 
-    const grid = new THREE.GridHelper(roomSize, 15, 0xaaaaaa, 0xdddddd);
-    scene.add(grid);
+    function createRoom(id, offsetX) {
+        const roomGroup = new THREE.Group();
+        roomGroup.position.x = offsetX;
+        roomGroup.name = `roomGroup_${id}`;
 
-    // --- オブジェクト配置 ---
-    function makeObj(w, h, d, x, z, col, name) {
-        const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), new THREE.MeshStandardMaterial({color: col, metalness: 0.2, roughness: 0.4}));
+        const roomMesh = new THREE.Mesh(
+            new THREE.BoxGeometry(roomSize, roomHeight, roomSize),
+            new THREE.MeshStandardMaterial({ color: 0xeeeeee, side: THREE.BackSide })
+        );
+        roomMesh.position.y = roomHeight / 2;
+        roomMesh.receiveShadow = true;
+        roomMesh.name = `floor_${id}`; // レイキャスト用に名前付け
+        roomGroup.add(roomMesh);
+
+        const grid = new THREE.GridHelper(roomSize, 15, 0xaaaaaa, 0xdddddd);
+        grid.position.y = 0.01;
+        roomGroup.add(grid);
+        
+        scene.add(roomGroup);
+        rooms[id] = roomGroup;
+        return roomGroup;
+    }
+
+    // 第一の部屋 (スタート地点)
+    const room1 = createRoom(1, 0);
+    makeObj(1.5, 5.5, 4, -6.5, 0, 0x3e2723, "shelf_r1", room1); // 本棚
+    makeObj(0.2, 1, 1, 0, 3, 0xff0000, "button_red_r1", room1); // 赤ボタン
+    makeObj(0.2, 1, 1, 0, 0, 0x00ff00, "button_green_r1", room1); // 緑ボタン
+    makeObj(0.2, 1, 1, 0, -3, 0x0000ff, "button_blue_r1", room1); // 青ボタン
+    // 部屋1 -> 部屋2 へのドア
+    makeObj(2.5, 5.5, 0.2, 7.4, 0, 0x555555, "door_r1_to_r2", room1);
+
+    // 第二の部屋
+    const room2 = createRoom(2, roomSpacing);
+    makeObj(3, 1.2, 2, roomSpacing + 5, 4, 0x212121, "desk_r2", room2);
+    makeObj(0.7, 0.7, 0.7, roomSpacing + 5, 4, 0x455a64, "safe_r2", room2);
+    makeObj(1, 1, 0.5, roomSpacing - 5, 0, 0x888888, "clock_r2", room2); // 時計
+    // 部屋2 -> 部屋1 へのドア
+    makeObj(2.5, 5.5, 0.2, roomSpacing - 7.4, 0, 0x555555, "door_r2_to_r1", room2);
+    // 部屋2 -> 部屋3 へのドア
+    makeObj(2.5, 5.5, 0.2, roomSpacing + 7.4, 0, 0x555555, "door_r2_to_r3", room2);
+
+    // 第三の部屋 (最終部屋)
+    const room3 = createRoom(3, roomSpacing * 2);
+    makeObj(0.8, 1.8, 0.8, roomSpacing * 2 - 5, 0, 0x78909c, "socket_r3", room3); // 部品をはめるソケット
+    // 最終脱出ドア
+    makeObj(2.5, 5.5, 0.2, roomSpacing * 2 + 7.4, 0, 0x263238, "door_exit_r3", room3);
+    // 部屋3 -> 部屋2 へのドア
+    makeObj(2.5, 5.5, 0.2, roomSpacing * 2 - 7.4, 0, 0x555555, "door_r3_to_r2", room3);
+
+
+    // オブジェクト作成ヘルパー
+    function makeObj(w, h, d, x, z, col, name, parent) {
+        const geo = new THREE.BoxGeometry(w, h, d);
+        const mat = new THREE.MeshStandardMaterial({color: col, metalness: 0.2, roughness: 0.4});
+        const m = new THREE.Mesh(geo, mat);
         m.position.set(x, h/2, z);
         m.name = name;
         m.castShadow = true;
         m.receiveShadow = true;
-        scene.add(m);
+        parent.add(m);
         return m;
     }
 
-    makeObj(1.5, 5.5, 4, -6.5, 0, 0x3e2723, "shelf"); // 本棚
-    makeObj(3, 1.2, 2, 5.5, 4, 0x212121, "desk");    // デスク
-    makeObj(0.7, 0.7, 0.7, 5.5, 4, 0x455a64, "safe"); // 金庫（以前のbox）
-    makeObj(0.8, 1.8, 0.8, -5, -5, 0x78909c, "pedestal"); // 台座
-    makeObj(2.5, 5.5, 0.2, 0, -7.4, 0x263238, "door");   // ドア
-
     camera.position.set(0, 3, 6);
 
-    // --- 操作ロジック ---
+    // --- ロジック ---
     const keys = {};
     let yaw = 0, pitch = 0;
 
@@ -172,7 +217,10 @@
                 const nextX = camera.position.x + moveVec.x;
                 const nextZ = camera.position.z + moveVec.z;
                 const limit = (roomSize / 2) - 1.2;
-                if (Math.abs(nextX) < limit) camera.position.x = nextX;
+                
+                // 現在の部屋の座標系で移動し、その後全体座標に変換
+                const currentRoomOffsetX = (state.currentRoom - 1) * roomSpacing;
+                if (Math.abs(nextX - currentRoomOffsetX) < limit) camera.position.x = nextX;
                 if (Math.abs(nextZ) < limit) camera.position.z = nextZ;
             }
         }
@@ -192,29 +240,57 @@
         if(hits.length > 0 && hits[0].distance < 5) {
             const target = hits[0].object.name;
             
-            if(target === "shelf") {
-                if(!state.inv.includes("box_item")) {
-                    state.inv.push("box_item");
-                    notify("棚から「謎の小箱」を見つけた。");
-                } else {
-                    notify("古びた本が並んでいる。");
+            // --- 部屋1のインタラクション ---
+            if(state.currentRoom === 1) {
+                if(target === "shelf_r1") {
+                    notify("棚には何もなさそうだ。");
+                } else if (target.startsWith("button_") && target.endsWith("_r1")) {
+                    if (!state.solvedRoom1) {
+                        const color = target.split('_')[1]; // red, green, blue
+                        state.room1ButtonsPressed.push(color);
+                        notify(`${color}ボタンを押した！`);
+                        checkRoom1Puzzle();
+                    }
+                } else if (target === "door_r1_to_r2") {
+                    if (state.inv.includes("key_r2")) {
+                        changeRoom(2);
+                    } else {
+                        notify("ドアは鍵がかかっている。");
+                    }
                 }
-            } else if(target === "safe") {
-                if(!state.solved) {
-                    document.exitPointerLock();
-                    document.getElementById('numpad').style.display = 'block';
-                } else {
-                    notify("金庫はすでに空だ。");
+            } 
+            // --- 部屋2のインタラクション ---
+            else if (state.currentRoom === 2) {
+                if (target === "desk_r2") {
+                    notify("デスクだ。何か書いてあるようだ。");
+                } else if (target === "safe_r2") {
+                    if (!state.solvedRoom2) {
+                        document.exitPointerLock();
+                        document.getElementById('numpad').style.display = 'block';
+                    } else {
+                        notify("金庫は開いている。中身は空だ。");
+                    }
+                } else if (target === "clock_r2") {
+                    notify("古い振り子時計だ。時刻は『3時45分』を指している。");
+                } else if (target === "door_r2_to_r1") {
+                    changeRoom(1);
+                } else if (target === "door_r2_to_r3") {
+                    if (state.inv.includes("lever_part")) { // 仮：部品が鍵
+                         changeRoom(3);
+                    } else {
+                        notify("向こうのドアは固く閉まっている。");
+                    }
                 }
-            } else if(target === "desk") {
-                if(!state.inv.includes("note")) {
-                    state.inv.push("note");
-                    notify("デスクの引き出しからメモが出てきた。");
-                }
-            } else if(target === "pedestal") {
-                notify(state.pedestalUsed ? "鍵が中に入っていた場所だ。" : "何かを差し込むスロットがある。");
-            } else if(target === "door") {
-                notify("脱出用の扉だ。強固なロックがかかっている。");
+            }
+            // --- 部屋3のインタラクション ---
+            else if (state.currentRoom === 3) {
+                 if (target === "socket_r3") {
+                    notify("大きなソケットだ。部品をはめ込む穴がある。");
+                 } else if (target === "door_r3_to_r2") {
+                     changeRoom(2);
+                 } else if (target === "door_exit_r3") {
+                     notify("最終脱出ドアだ。特別な鍵が必要そうだ。");
+                 }
             }
             updateUI();
         }
@@ -231,64 +307,105 @@
             const target = hits[0].object.name;
             const held = state.inv[state.sel];
 
-            if(target === "pedestal" && held === "handle") {
-                state.inv.splice(state.sel, 1);
-                state.inv.push("key");
-                state.sel = state.inv.length - 1;
-                state.pedestalUsed = true;
-                notify("レバーを倒すと、台座がスライドして鍵が現れた！");
-            } else if(target === "door" && held === "key") {
-                notify("扉が開いた！自由だ！");
-                setTimeout(()=>location.reload(), 3000);
-            } else {
-                notify("ここでは使えないようだ。");
+            // 部屋1でのアイテム使用
+            if(state.currentRoom === 1) {
+                if (target === "door_r1_to_r2" && held === "key_r2") {
+                    state.inv.splice(state.sel, 1); // 鍵消費
+                    changeRoom(2);
+                    notify("鍵を使って、部屋2へのドアを開けた！");
+                } else {
+                    notify("ここでは使えないようだ。");
+                }
+            } 
+            // 部屋2でのアイテム使用
+            else if (state.currentRoom === 2) {
+                // 仮で何かに部品を使用
+                if (target === "desk_r2" && held === "lever_part" && !state.solvedRoom2) {
+                     state.inv.splice(state.sel, 1);
+                     state.solvedRoom2 = true;
+                     notify("デスクの奥に部品がはまった！何かヒントが...");
+                     // ここで新しいヒントを出すなり、次の部屋へのドアが開くなり
+                     itemData.lever_part.desc = "部品には『NEXT: 412』と書かれている。"; // ヒント更新
+                     document.getElementById(`detail-desc`).innerText = itemData.lever_part.desc; // 表示更新
+                } else {
+                    notify("ここでは使えないようだ。");
+                }
+            }
+            // 部屋3でのアイテム使用
+            else if (state.currentRoom === 3) {
+                if (target === "socket_r3" && held === "lever_part" && !state.inv.includes("final_key")) {
+                     state.inv.splice(state.sel, 1); // 部品消費
+                     state.inv.push("final_key");
+                     state.sel = state.inv.length - 1;
+                     notify("部品がはまり、中央から最終鍵が浮上した！");
+                } else if (target === "door_exit_r3" && held === "final_key") {
+                    notify("おめでとう！すべての謎を解き、脱出に成功した！");
+                    setTimeout(()=>location.reload(), 5000);
+                } else {
+                    notify("ここでは使えないようだ。");
+                }
             }
             updateUI();
         }
     }
 
-    // アイテム詳細（Enter）
-    function showItemDetail() {
-        if(state.sel === -1) return;
-        const id = state.inv[state.sel];
-        const item = itemData[id];
-        
-        // 小箱の詳細を見た時だけ真実がわかるギミック
-        let description = item.desc;
-        if(id === "box_item") {
-            description += " ……底に小さく『中央：7』と刻まれている。";
+    // --- 部屋1のパズル (赤、緑、青の順で押す) ---
+    function checkRoom1Puzzle() {
+        const correctOrder = ["red", "green", "blue"];
+        if (state.room1ButtonsPressed.length === correctOrder.length) {
+            const isCorrect = state.room1ButtonsPressed.every((val, index) => val === correctOrder[index]);
+            if (isCorrect && !state.solvedRoom1) {
+                state.solvedRoom1 = true;
+                state.inv.push("key_r2");
+                notify("正解！部屋2への鍵を入手した！");
+            } else if (!isCorrect) {
+                notify("間違った順序だ。最初からやり直し。");
+            }
+            state.room1ButtonsPressed = []; // リセット
+            updateUI();
         }
-        if(id === "safe") { // 金庫そのものを調べる代わりにメモの裏など
-             // 他のアイテムにも隠し要素を追加可能
-        }
-
-        document.getElementById('detail-name').innerText = item.name;
-        document.getElementById('detail-icon').innerText = item.icon;
-        document.getElementById('detail-desc').innerText = description;
-        document.getElementById('item-detail').style.display = 'block';
-        document.exitPointerLock();
     }
 
-    // 金庫の判定 (暗号: 3 7 5)
-    // 3: メモに記載
-    // 7: 小箱をEnterで調査すると底に見つかる
-    // 5: 金庫を「横から」または「近くで」見た時に背後に書いてある（設定）
+    // --- 部屋2の金庫 (時計のヒント: 3時45分 -> 345) ---
     window.checkSafe = () => {
-        if(document.getElementById('code-in').value === "375") {
-            state.solved = true;
-            state.inv.push("handle");
+        if(document.getElementById('code-in').value === "345") {
+            state.solvedRoom2 = true;
+            state.inv.push("lever_part");
             closeNumpad();
-            notify("金庫が開いた！中からレバーを入手。");
+            notify("金庫が開いた！中から「レバー部品」を入手。");
             updateUI();
-        } else {
-            alert("番号が違います。ヒントをよく探しましょう。");
-        }
+        } else { alert("番号が違う。部屋の中のヒントをよく探そう。"); }
     };
+
+    // --- 部屋移動 ---
+    function changeRoom(newRoomId) {
+        const currentRoomOffsetX = (state.currentRoom - 1) * roomSpacing;
+        const newRoomOffsetX = (newRoomId - 1) * roomSpacing;
+        
+        // カメラの位置を新しい部屋の中央に調整
+        camera.position.x = newRoomOffsetX; 
+        camera.position.z = 6; // 部屋の入り口付近に配置
+        camera.position.y = 3;
+
+        state.currentRoom = newRoomId;
+        notify(`部屋${newRoomId}へ移動した。`);
+    }
 
     window.closeNumpad = () => {
         document.getElementById('numpad').style.display = 'none';
         renderer.domElement.requestPointerLock();
     };
+    function showItemDetail() {
+        if(state.sel === -1) return;
+        const id = state.inv[state.sel];
+        const item = itemData[id];
+        
+        document.getElementById('detail-name').innerText = item.name;
+        document.getElementById('detail-icon').innerText = item.icon;
+        document.getElementById('detail-desc').innerText = item.desc;
+        document.getElementById('item-detail').style.display = 'block';
+        document.exitPointerLock();
+    }
     window.closeDetail = () => {
         document.getElementById('item-detail').style.display = 'none';
         renderer.domElement.requestPointerLock();
