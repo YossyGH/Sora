@@ -3,120 +3,117 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>3D Escape - Standard Room</title>
+    <title>3D Walkable Escape</title>
     <style>
-        :root {
-            --wall: #f4f1ea; /* 温かみのある白 */
-            --floor: #8b5a2b; /* フローリング風 */
-            --accent: #2c3e50;
-        }
-        body, html { margin: 0; padding: 0; height: 100vh; background: #333; color: #333; font-family: "Helvetica Neue", Arial, sans-serif; overflow: hidden; }
-        
-        /* 3D 空間の設定 */
-        #viewport {
-            width: 100vw; height: 50vh;
-            perspective: 1000px;
-            background: #aad; /* 窓の外の空の色 */
-            display: flex; align-items: center; justify-content: center;
-            overflow: hidden;
+        :root { --wall: #e0e0e0; --floor: #795548; --accent: #2196F3; }
+        body { margin: 0; background: #222; color: #fff; font-family: sans-serif; overflow: hidden; height: 100vh; display: flex; flex-direction: column; }
+
+        /* 3Dレンダリングエリア */
+        #stage {
+            width: 100%; height: 50vh; perspective: 600px;
+            background: #87CEEB; position: relative; overflow: hidden;
         }
 
-        #world {
-            width: 400px; height: 400px;
-            transform-style: preserve-3d;
-            transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        #camera {
+            width: 100%; height: 100%; position: absolute;
+            transform-style: preserve-3d; transition: transform 0.3s ease;
         }
 
-        .wall {
+        /* 空間（部屋） */
+        .room {
             position: absolute; width: 400px; height: 400px;
-            border: 1px solid #ddd;
-            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            top: 50%; left: 50%; margin: -200px;
+            transform-style: preserve-3d;
+        }
+
+        .plane {
+            position: absolute; width: 400px; height: 400px;
+            background: var(--wall); border: 2px solid #ccc;
+            display: flex; align-items: center; justify-content: center; font-size: 50px;
             backface-visibility: hidden;
         }
 
-        /* 壁の装飾と配置 */
-        .front  { transform: translateZ(200px); background: var(--wall); }
-        .back   { transform: rotateY(180deg) translateZ(200px); background: var(--wall); }
-        .left   { transform: rotateY(-90deg) translateZ(200px); background: #ebe8e0; }
-        .right  { transform: rotateY(90deg) translateZ(200px); background: #ebe8e0; }
-        .floor  { transform: rotateX(-90deg) translateZ(200px); background: var(--floor); box-shadow: inset 0 0 100px rgba(0,0,0,0.2); }
-        .ceiling { transform: rotateX(90deg) translateZ(200px); background: #fff; }
+        /* 迷路の構造 (Z方向に並べる) */
+        .p-front  { transform: translateZ(200px); }
+        .p-back   { transform: rotateY(180deg) translateZ(200px); }
+        .p-left   { transform: rotateY(-90deg) translateZ(200px); }
+        .p-right  { transform: rotateY(90deg) translateZ(200px); }
+        .p-floor  { transform: rotateX(-90deg) translateZ(200px); background: var(--floor); }
+        .p-ceil   { transform: rotateX(90deg) translateZ(200px); background: #fff; }
 
-        /* 家具のシンボル */
-        .obj { font-size: 5rem; cursor: pointer; transition: 0.2s; user-select: none; }
-        .obj:hover { transform: scale(1.1); }
-        .label { font-weight: bold; margin-top: 10px; background: rgba(255,255,255,0.8); padding: 2px 10px; border-radius: 10px; font-size: 0.8rem; }
-
-        /* UIエリア */
-        #ui { height: 50vh; background: #fff; display: flex; flex-direction: column; }
-        #log { flex: 1; padding: 15px; font-size: 0.95rem; border-bottom: 1px solid #eee; overflow-y: auto; line-height: 1.6; }
+        /* UIと操作 */
+        #ui { flex: 1; background: #fff; color: #333; display: flex; flex-direction: column; }
+        #msg { padding: 15px; font-size: 0.9rem; border-bottom: 1px solid #ddd; height: 60px; overflow-y: auto; }
         
-        /* 十字キー / コントローラー */
-        .controller {
-            display: grid;
-            grid-template-columns: 60px 60px 60px;
-            grid-template-rows: 50px 50px;
-            gap: 10px;
-            justify-content: center;
-            padding: 20px;
-            background: #f9f9f9;
+        .d-pad {
+            display: grid; grid-template-columns: 70px 70px 70px; grid-template-rows: 60px 60px;
+            gap: 10px; justify-content: center; padding: 20px;
         }
         .btn {
-            background: #eee; border: 1px solid #ccc; border-radius: 8px;
-            display: flex; align-items: center; justify-content: center;
-            font-size: 1.2rem; cursor: pointer; user-select: none;
+            background: #eee; border: 2px solid #ccc; border-radius: 10px;
+            display: flex; align-items: center; justify-content: center; cursor: pointer; font-weight: bold;
         }
-        .btn:active { background: #ddd; transform: translateY(2px); }
-        .btn-large { grid-column: span 3; background: var(--accent); color: #fff; font-size: 0.9rem; font-weight: bold; margin-top: 5px;}
+        .btn:active { background: #bbb; }
+        .btn-action { grid-column: span 3; background: var(--accent); color: white; border: none; }
 
-        /* 入力ボックス */
-        #input-box { padding: 10px 20px; display: flex; gap: 10px; background: #f9f9f9; }
-        input { flex: 1; padding: 12px; border: 2px solid #ddd; border-radius: 5px; font-size: 1.2rem; text-align: center; }
+        #pass-ui { padding: 0 20px; text-align: center; }
+        input { width: 100px; font-size: 1.5rem; text-align: center; border: 2px solid #ccc; border-radius: 5px; }
 
-        /* クリア画面 */
         #clear {
             position: fixed; top:0; left:0; width:100%; height:100%;
-            background: rgba(255,255,255,0.95); display: none;
-            flex-direction: column; justify-content: center; align-items: center; z-index: 100;
+            background: #fff; display: none; flex-direction: column; justify-content: center; align-items: center; z-index: 1000;
         }
     </style>
 </head>
 <body>
 
-<div id="viewport">
-    <div id="world">
-        <div class="wall front">
-            <div class="obj" onclick="interact('door')">🚪</div>
-            <div class="label">出口のドア</div>
+<div id="stage">
+    <div id="camera">
+        <div class="room">
+            <div class="plane p-front">🚪</div> <div class="plane p-back">🖼️</div>  <div class="plane p-left">📚</div>  <div class="plane p-right">🪴</div> <div class="plane p-floor"></div>
+            <div class="plane p-ceil"></div>
         </div>
-        <div class="wall back">
-            <div class="obj" onclick="interact('desk')">🛋️</div>
-            <div class="label">ソファ</div>
-        </div>
-        <div class="wall left">
-            <div class="obj" onclick="interact('plant')">🪴</div>
-            <div class="label">観葉植物</div>
-        </div>
-        <div class="wall right">
-            <div class="obj" onclick="interact('shelf')">📦</div>
-            <div class="label">収納ボックス</div>
-        </div>
-        <div class="wall floor"></div>
-        <div class="wall ceiling"></div>
     </div>
 </div>
 
 <div id="ui">
-    <div id="log">普通の部屋に閉じ込められたようだ。矢印ボタンで周囲を調べ、脱出用の4桁の暗証番号を見つけよう。</div>
+    <div id="msg">矢印で部屋の中を移動できる。目の前のものを詳しく調べるには「CHECK」を押せ。</div>
     
-    <div id="input-box">
-        <input type="number" id="pass" placeholder="0000">
+    <div id="pass-ui">
+        <input type="number" id="code" placeholder="----">
     </div>
 
-    <div class="controller">
+    <div class="d-pad">
         <div></div>
-        <div class="btn" onclick="rotate(180)">↑</div>
+        <div class="btn" onclick="move('f')">前進</div>
         <div></div>
-        <div class="btn" onclick="rotate(-90)">←</div>
-        <div class="btn" onclick="rotate(0)">●</div>
-        <div class="btn" onclick="rotate(90)">→</div>
+        <div class="btn" onclick="turn('l')">左向</div>
+        <div class="btn" onclick="move('b')">後退</div>
+        <div class="btn" onclick="turn('r')">右向</div>
+        <div class="btn btn-action" onclick="check()">CHECK (調べる / 脱出)</div>
+    </div>
+</div>
+
+<div id="clear">
+    <h1>ESCAPE SUCCESS!</h1>
+    <p>おめでとう！よしたは部屋を攻略した！</p>
+    <button onclick="location.reload()" style="padding: 15px 30px; font-size: 1rem;">最初から</button>
+</div>
+
+<script>
+    let posX = 0, posZ = 0, rotY = 0;
+    const msgEl = document.getElementById('msg');
+
+    function updateCamera() {
+        const cam = document.getElementById('camera');
+        // 前進・後退などの「立体的な移動」をtransformで表現
+        cam.style.transform = `rotateY(${rotY}deg) translate3d(${-posX}px, 0, ${-posZ}px)`;
+    }
+
+    function move(dir) {
+        // 現在の向きに合わせて座標を計算
+        const rad = rotY * Math.PI / 180;
+        const step = 200; // 1マスの移動距離
+        if (dir === 'f') {
+            posX += Math.sin(rad) * step;
+            pos
