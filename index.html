@@ -2,82 +2,56 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <title>THE THREE ROOMS - FULL FUNCTION</title>
+    <title>THE THREE ROOMS - BUG FIXED</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <style>
         body { margin: 0; overflow: hidden; background: #000; font-family: sans-serif; }
         #overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 10000; color: white; }
-        
         #guide { position: absolute; top: 20px; right: 20px; background: rgba(0,0,0,0.8); color: #fff; padding: 15px; border-radius: 8px; font-size: 13px; z-index: 500; border-left: 5px solid #e74c3c; }
-        .k { background: #444; padding: 2px 5px; border-radius: 3px; color: #ffeb3b; font-weight: bold; }
-
+        .k { background: #444; padding: 2px 5px; border-radius: 3px; color: #ffeb3b; }
         #inv { position: absolute; top: 20px; left: 20px; display: flex; flex-direction: column; gap: 10px; z-index: 500; }
-        .slot { width: 90px; height: 90px; background: rgba(10,10,10,0.9); border: 2px solid #444; border-radius: 12px; display: flex; flex-direction: column; align-items: center; justify-content: center; color: white; }
-        .slot.active { border-color: #e74c3c; box-shadow: 0 0 15px rgba(231,76,60,0.6); }
-
-        #msg-box { position: absolute; bottom: 40px; width: 100%; text-align: center; pointer-events: none; }
-        #msg-text { display: inline-block; background: rgba(0,0,0,0.9); color: white; padding: 18px 40px; border: 2px solid #e74c3c; font-size: 19px; border-radius: 8px; }
-
-        /* 詳細画面（ここを復活させました） */
+        .slot { width: 90px; height: 90px; background: rgba(20,20,20,0.9); border: 2px solid #444; border-radius: 12px; display: flex; flex-direction: column; align-items: center; justify-content: center; color: white; }
+        .slot.active { border-color: #e74c3c; background: rgba(231,76,60,0.2); }
+        #msg-box { position: absolute; bottom: 50px; width: 100%; text-align: center; pointer-events: none; }
+        #msg-text { display: inline-block; background: rgba(0,0,0,0.95); color: white; padding: 20px 40px; border: 2px solid #e74c3c; font-size: 20px; border-radius: 10px; min-width: 450px; }
         #inspect { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 8000; flex-direction: column; align-items: center; justify-content: center; color: white; text-align: center; }
-        #ins-content { background: #111; padding: 60px; border: 2px solid #444; border-radius: 30px; max-width: 600px; }
-
-        #safe-ui { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #2c3e50; padding: 25px; border-radius: 15px; z-index: 5000; border: 4px solid #fff; }
-        #safe-disp { font-size: 35px; width: 180px; text-align: center; margin-bottom: 15px; background: #000; color: #2ecc71; border: none; font-family: monospace; }
-        .numpad { display: grid; grid-template-columns: repeat(3, 65px); gap: 10px; }
-        .numpad button { height: 60px; cursor: pointer; background: #34495e; color: white; font-size: 22px; }
-
-        #telop { position: fixed; top: 35%; width: 100%; text-align: center; color: #ffeb3b; font-size: 45px; font-weight: bold; z-index: 9999; text-shadow: 3px 3px 10px #000; pointer-events: none; visibility: hidden; }
-        @keyframes fadeInOut { 0% { opacity: 0; visibility: visible; } 20% { opacity: 1; } 80% { opacity: 1; } 100% { opacity: 0; visibility: hidden; } }
+        #telop { position: fixed; top: 30%; width: 100%; text-align: center; color: #ffeb3b; font-size: 50px; font-weight: bold; z-index: 9000; text-shadow: 4px 4px 10px #000; display: none; pointer-events: none; }
+        #safe-ui { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #2c3e50; padding: 30px; border-radius: 15px; z-index: 5000; border: 4px solid #fff; }
+        #safe-disp { font-size: 40px; width: 200px; text-align: center; margin-bottom: 20px; background: #000; color: #2ecc71; border: none; }
+        .numpad { display: grid; grid-template-columns: repeat(3, 70px); gap: 10px; }
+        .numpad button { height: 60px; cursor: pointer; font-size: 24px; }
     </style>
 </head>
 <body>
 
-<div id="overlay">
-    <h1>THE THREE ROOMS</h1>
-    <button style="padding:15px 45px; cursor:pointer;" onclick="startGame()">探索開始</button>
-</div>
-
-<div id="guide">
-    <div style="color:#e74c3c; font-weight:bold; margin-bottom:5px;">CONTROL</div>
-    <span class="k">↑↓←→</span> 移動 / <span class="k">Mouse</span> 視点<br>
-    <span class="k">SPACE</span> 調べる / <span class="k">TAB</span> スロット切替<br>
-    <span class="k">SHIFT</span> 詳細を確認
-</div>
-
+<div id="overlay"><h1>THE THREE ROOMS</h1><button style="padding:15px 50px; cursor:pointer;" onclick="startGame()">探索開始</button></div>
+<div id="guide"><span class="k">SPACE</span> 調べる / <span class="k">TAB</span> 切替 / <span class="k">SHIFT</span> 詳細</div>
 <div id="inv">
-    <div id="s0" class="slot active"><div class="icon" style="font-size:35px"></div><div style="font-size:10px">Slot 1</div></div>
-    <div id="s1" class="slot"><div class="icon" style="font-size:35px"></div><div style="font-size:10px">Slot 2</div></div>
-    <div id="s2" class="slot"><div class="icon" style="font-size:35px"></div><div style="font-size:10px">Slot 3</div></div>
+    <div id="s0" class="slot active"><div class="icon" style="font-size:40px"></div></div>
+    <div id="s1" class="slot"><div class="icon" style="font-size:40px"></div></div>
+    <div id="s2" class="slot"><div class="icon" style="font-size:40px"></div></div>
 </div>
-
-<div id="inspect">
-    <div id="ins-content">
-        <div id="ins-icon" style="font-size: 100px; margin-bottom: 20px;"></div>
-        <h2 id="ins-title" style="color: #e74c3c; font-size: 32px; margin: 10px 0;"></h2>
-        <p id="ins-desc" style="font-size: 20px; color: #ccc; line-height: 1.6;"></p>
-        <p style="margin-top: 40px; color: #666;">[ SHIFT ] 閉じる</p>
-    </div>
-</div>
-
+<div id="inspect"><div style="background:#111; padding:50px; border:2px solid #444; border-radius:20px;">
+    <div id="ins-icon" style="font-size:100px;"></div><h2 id="ins-title"></h2><p id="ins-desc" style="font-size:20px;"></p>
+    <p style="color:#666; margin-top:30px;">[ SHIFT ] 閉じる</p>
+</div></div>
 <div id="telop">ヒント：『黄色は赤の直後ではない』</div>
-<div id="msg-box"><div id="msg-text">脱出の手がかりを探せ。</div></div>
-
+<div id="msg-box"><div id="msg-text">周囲を調査せよ。</div></div>
 <div id="safe-ui">
     <input type="text" id="safe-disp" readonly>
     <div class="numpad" id="btns"></div>
-    <button onclick="checkSafe()" style="width:100%; margin-top:15px; padding:15px; background:#27ae60; color:white; border:none; cursor:pointer; font-weight:bold;">解除</button>
+    <button onclick="checkSafe()" style="width:100%; margin-top:20px; padding:15px; background:#27ae60; color:white; border:none; cursor:pointer; font-weight:bold;">解除</button>
 </div>
 
 <script>
 let scene, camera, renderer, yaw = 0, pitch = 0, keys = {};
-const player = { inv: [null, null, null], sel: 0, isUI: false, inIns: false, r3Ready: true };
-const world = { d1: false, d2: false, chairState: 0, puzzle: [] };
+const player = { inv: [null, null, null], sel: 0, isUI: false, inIns: false, r3Done: false };
+const world = { d1: false, d2: false, chMoved: false, puzzle: [] };
 
 const ITEM_DATA = {
-    key1: { icon: "🗝️", name: "真鍮の鍵", desc: "古い真鍮製の鍵。<br>刻印がある：『赤は青より前だが、直後（隣）ではない』" },
-    card: { icon: "💳", name: "認証カード", desc: "Room 2のセキュリティカード。<br>印字：『青は2番目だ』" },
-    key2: { icon: "🔑", name: "黄金の鍵", desc: "最終脱出用の鍵。<br>出口の金の扉に使用する。" }
+    key1: { icon: "🗝️", name: "真鍮の鍵", desc: "ヒント：『赤は青より前だが、直前（隣）ではない』" },
+    card: { icon: "💳", name: "認証カード", desc: "ヒント：『青は2番目だ』" },
+    key2: { icon: "🔑", name: "黄金の鍵", desc: "出口の扉を開けるための鍵。" }
 };
 
 function startGame() {
@@ -89,9 +63,7 @@ function startGame() {
     document.body.appendChild(renderer.domElement);
 
     scene.add(new THREE.AmbientLight(0xffffff, 1.5));
-    [0, 22, 44].forEach(x => {
-        let p = new THREE.PointLight(0xffffff, 1.2, 40); p.position.set(x, 7, 0); scene.add(p);
-    });
+    [0, 22, 44].forEach(x => { let p = new THREE.PointLight(0xffffff, 1.2, 40); p.position.set(x, 7, 0); scene.add(p); });
 
     createRoom(0, 0x2c1e14); createRoom(22, 0x0f260f); createRoom(44, 0x0f0f26);
 
@@ -136,17 +108,8 @@ function createRoom(x, col) {
 function createP(x, z, col, id) {
     const g = new THREE.Group();
     const o = new THREE.Mesh(new THREE.OctahedronGeometry(0.7), new THREE.MeshStandardMaterial({color: col, emissive: col, emissiveIntensity: 0.6}));
-    o.position.y = 4; o.name = "n_" + id; o.userData = { originalColor: col };
+    o.position.y = 4; o.name = "n_" + id; o.userData = { col: col };
     g.add(o); g.position.set(x, 1.75, z); scene.add(g);
-}
-
-function addToInv(id) {
-    if (player.inv.includes(id)) return;
-    const emptySlot = player.inv.indexOf(null);
-    if (emptySlot !== -1) {
-        player.inv[emptySlot] = id;
-        updateUI();
-    }
 }
 
 function interact() {
@@ -156,40 +119,28 @@ function interact() {
         const o = h[0].object; const item = player.inv[player.sel];
         
         if(o.name === "vase") { 
-            addToInv("key1");
-            notify("壺から【真鍮の鍵】と【銀貨1枚】を手に入れた。"); 
+            player.inv[0] = "key1"; updateUI();
+            document.getElementById('msg-text').innerText = "【重要】壺から『真鍮の鍵』と『銀貨1枚』を入手！";
         }
         else if(o.name === "door1") { 
-            if(item === "key1") { o.position.y += 8; world.d1 = true; notify("Room 1 開放。"); } 
-            else notify("鍵がかかっている。"); 
+            if(item === "key1") { o.position.y += 8; world.d1 = true; document.getElementById('msg-text').innerText = "扉が開いた。"; } 
         }
         else if(o.name === "chair") { 
-            if(world.chairState === 0) {
-                o.position.x -= 3; world.chairState = 1;
-                notify("椅子を動かした。座面裏に『PASS = (椅子の数1 + コイン数1) × 441』とある。");
-            } else {
-                notify("座面裏：『PASS = (椅子の数1 + コイン数1) × 441』");
-            }
+            o.position.x -= 3; world.chMoved = true;
+            document.getElementById('msg-text').innerText = "数式を発見：『PASS = (椅子の数1 + コイン数1) × 441』";
         }
         else if(o.name === "safe") { 
-            if(world.chairState === 1) { 
-                player.isUI = true; document.getElementById('safe-ui').style.display='block'; document.exitPointerLock(); 
-            } else notify("金庫だ。解除番号が必要だ。");
+            if(world.chMoved) { player.isUI = true; document.getElementById('safe-ui').style.display='block'; document.exitPointerLock(); }
         }
         else if(o.name === "door2") { 
-            if(item === "card") { o.position.y += 8; world.d2 = true; notify("Room 2 開放。"); } 
-            else notify("カードが必要だ。"); 
+            if(item === "card") { o.position.y += 8; world.d2 = true; document.getElementById('msg-text').innerText = "扉が開いた。"; } 
         }
         else if(o.name.startsWith("n_")) {
             const id = o.name.split("_")[1]; world.puzzle.push(id); 
-            o.material.emissive.set(0xffffff); o.material.emissiveIntensity = 10;
+            o.material.emissive.set(0xffffff);
             if(world.puzzle.length === 4) {
-                if(world.puzzle.join(",") === "red,blue,yellow,green") { 
-                    addToInv("key2"); notify("パズル正解！黄金の鍵を入手。"); 
-                } else { 
-                    world.puzzle = []; notify("不正解。光がリセットされた。"); 
-                    scene.traverse(obj => { if(obj.name?.startsWith("n_")) { obj.material.emissive.set(obj.userData.originalColor); obj.material.emissiveIntensity = 0.6; } });
-                }
+                if(world.puzzle.join(",") === "red,blue,yellow,green") { player.inv[2] = "key2"; updateUI(); document.getElementById('msg-text').innerText = "黄金の鍵を入手！"; }
+                else { world.puzzle = []; scene.traverse(obj => { if(obj.name?.startsWith("n_")) obj.material.emissive.set(obj.userData.col); }); }
             }
         }
         else if(o.name === "exit") { if(item === "key2") { alert("脱出成功！"); location.reload(); } }
@@ -215,10 +166,10 @@ function toggleInspect() {
 
 function checkSafe() {
     if(document.getElementById('safe-disp').value === "882") {
-        addToInv("card"); notify("金庫解除！カードを入手。"); 
-        player.isUI = false; document.getElementById('safe-ui').style.display='none';
-        renderer.domElement.requestPointerLock();
-    } else { document.getElementById('safe-disp').value = ""; notify("番号が違う。"); }
+        player.inv[1] = "card"; updateUI(); player.isUI = false; 
+        document.getElementById('safe-ui').style.display='none'; renderer.domElement.requestPointerLock();
+        document.getElementById('msg-text').innerText = "カードキーを入手。";
+    } else { document.getElementById('safe-disp').value = ""; }
 }
 
 function updateUI() {
@@ -229,8 +180,6 @@ function updateUI() {
     }
 }
 
-function notify(t) { document.getElementById('msg-text').innerText = t; }
-
 function animate() {
     if(!player.isUI && !player.inIns) {
         const move = new THREE.Vector3();
@@ -240,11 +189,12 @@ function animate() {
         if(keys['ArrowLeft']) move.add(rgt.negate()); if(keys['ArrowRight']) move.add(rgt);
         if(move.length() > 0) camera.position.addScaledVector(move.normalize(), 0.18);
 
-        if(player.r3Ready && camera.position.x > 36) {
-            player.r3Ready = false;
+        // テロップ表示の強制実行
+        if(!player.r3Done && camera.position.x > 36) {
+            player.r3Done = true;
             const t = document.getElementById('telop');
-            t.style.animation = "fadeInOut 6s forwards";
-            notify("新しいヒントが浮かび上がった。");
+            t.style.display = "block";
+            setTimeout(() => { t.style.display = "none"; }, 6000);
         }
 
         camera.position.x = Math.max(-7, Math.min(51, camera.position.x));
@@ -259,9 +209,9 @@ function animate() {
 
 window.addEventListener('keydown', e => {
     keys[e.code] = true;
-    if(e.code === 'Space' && !player.isUI && !player.inIns) interact();
+    if(e.code === 'Space') interact();
     if(e.code === 'Tab') { e.preventDefault(); player.sel = (player.sel + 1) % 3; updateUI(); }
-    if(e.code.includes('Shift')) toggleInspect();
+    if(e.code === 'ShiftLeft' || e.code === 'ShiftRight') toggleInspect();
 });
 window.addEventListener('keyup', e => keys[e.code] = false);
 document.addEventListener('mousemove', e => { if (document.pointerLockElement) { yaw -= e.movementX * 0.002; pitch = Math.max(-1.4, Math.min(1.4, pitch - e.movementY * 0.002)); } });
