@@ -2,14 +2,13 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <title>THE THREE ROOMS - ARROW & MOUSE COMPLETE</title>
+    <title>THE THREE ROOMS - ADVANCED LOGIC</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <style>
         body { margin: 0; overflow: hidden; background: #000; font-family: 'Hiragino Kaku Gothic ProN', 'Meiryo', sans-serif; }
         #overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: radial-gradient(circle, #2c3e50, #000); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 10000; color: white; }
         .btn-start { background: #27ae60; color: white; border: none; padding: 20px 60px; font-size: 24px; font-weight: bold; border-radius: 50px; cursor: pointer; margin-top: 20px; box-shadow: 0 5px 15px rgba(0,0,0,0.5); }
         
-        /* 操作ガイド（右上）: ここを最新の操作法に修正しました */
         #guide { position: absolute; top: 20px; right: 20px; background: rgba(0,0,0,0.85); color: #fff; padding: 15px; border-radius: 8px; border-left: 5px solid #e74c3c; font-size: 13px; line-height: 1.7; z-index: 500; pointer-events: none; }
         .k { background: #444; padding: 2px 6px; border-radius: 4px; color: #ffeb3b; font-weight: bold; font-family: monospace; }
 
@@ -33,7 +32,7 @@
 
 <div id="overlay">
     <h1 style="font-size: 45px; letter-spacing: 5px;">THE THREE ROOMS</h1>
-    <p>論理のパズルを解き明かし、脱出せよ。</p>
+    <p>観察と論理が、真実への道を拓く。</p>
     <button class="btn-start" onclick="startGame()">探索を開始</button>
 </div>
 
@@ -52,7 +51,7 @@
 </div>
 
 <div id="telop">ROOM 3: 断絶された論理</div>
-<div id="msg-box"><div id="msg-text">ここから出なければ。</div></div>
+<div id="msg-box"><div id="msg-text">脱出の手がかりを探せ。</div></div>
 
 <div id="inspect">
     <div style="background:#111; padding:50px; border:1px solid #444; border-radius:20px; max-width: 500px;">
@@ -88,7 +87,6 @@ function startGame() {
     renderer.setSize(window.innerWidth, window.innerHeight);
     document.body.appendChild(renderer.domElement);
 
-    // 高輝度ライティング
     scene.add(new THREE.AmbientLight(0xffffff, 1.5));
     [0, 22, 44].forEach(x => {
         let p = new THREE.PointLight(0xffffff, 1.3, 30);
@@ -97,24 +95,33 @@ function startGame() {
 
     createRoom(0, 0x2c1e14); createRoom(22, 0x0f260f); createRoom(44, 0x0f0f26);
 
+    // Room 1 objects
     const v = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.4, 1), new THREE.MeshStandardMaterial({color: 0x00bcd4}));
     v.position.set(-6, 1.5, -6); v.name = "vase"; scene.add(v);
     const d1 = new THREE.Mesh(new THREE.BoxGeometry(0.4, 6, 3), new THREE.MeshStandardMaterial({color: 0x3e2723}));
     d1.position.set(8, 3, 0); d1.name = "door1"; scene.add(d1);
 
+    // Room 2 objects
     const ch = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.5, 1.5), new THREE.MeshStandardMaterial({color: 0x880e4f}));
     ch.position.set(24, 0.25, 5); ch.name = "chair"; scene.add(ch);
     const s = new THREE.Mesh(new THREE.BoxGeometry(1.2, 1.2, 1.2), new THREE.MeshStandardMaterial({color: 0x111}));
     s.position.set(29, 0.6, -6); s.name = "safe"; scene.add(s);
+    
+    // Room 2 Hint wall
     scene.add(createText("緑 ≠ 1, 3", 14.1, 1.5, 6, Math.PI/2)); 
+    
+    // Room 2 Door
     const d2 = new THREE.Mesh(new THREE.BoxGeometry(0.4, 6, 3), new THREE.MeshStandardMaterial({color: 0x000}));
     d2.position.set(30, 3, 0); d2.name = "door2"; scene.add(d2);
 
+    // Room 3 Pillars
     createP(40, -5, 0xff3333, "red"); createP(46, -5, 0x3333ff, "blue");
     createP(40, 5, 0xffff33, "yellow"); createP(46, 5, 0x33ff33, "green");
+    
     const ex = new THREE.Mesh(new THREE.BoxGeometry(0.4, 6, 3), new THREE.MeshStandardMaterial({color: 0xffd700}));
     ex.position.set(52, 3, 0); ex.name = "exit"; scene.add(ex);
 
+    // Numpad
     const b = document.getElementById('btns');
     for(let i=1; i<=9; i++) {
         let btn = document.createElement('button'); btn.innerText = i;
@@ -151,8 +158,13 @@ function createText(t, x, y, z, ry) {
 function createP(x, z, col, id) {
     const g = new THREE.Group();
     g.add(new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.4, 3.5), new THREE.MeshStandardMaterial({color: 0})));
-    const o = new THREE.Mesh(new THREE.OctahedronGeometry(0.7), new THREE.MeshStandardMaterial({color: col, emissive: col, emissiveIntensity: 0.6}));
-    o.position.y = 4; o.name = "n_" + id; g.add(o);
+    const o = new THREE.Mesh(new THREE.OctahedronGeometry(0.7), new THREE.MeshStandardMaterial({
+        color: col, 
+        emissive: col, 
+        emissiveIntensity: 0.6
+    }));
+    o.position.y = 4; o.name = "n_" + id; o.userData = { originalColor: col };
+    g.add(o);
     g.position.set(x, 1.75, z); scene.add(g);
 }
 
@@ -161,16 +173,54 @@ function interact() {
     const h = r.intersectObjects(scene.children, true);
     if(h.length > 0 && h[0].distance < 6) {
         const o = h[0].object; const item = player.inv[player.sel];
-        if(o.name === "vase") { if(!player.inv.includes("key1")) { player.inv.push("key1"); updateUI(); notify("真鍮の鍵を手に入れた。"); } }
-        else if(o.name === "door1") { if(item === "key1") { o.position.y += 8; world.d1 = true; notify("Room 1 開放。"); } else notify("鍵が必要だ。"); }
-        else if(o.name === "chair") { if(!world.chair) { o.position.x -= 3; world.chair = true; notify("X=42, PASS=X*21"); } }
-        else if(o.name === "safe") { if(world.chair) { player.isUI = true; document.getElementById('safe-ui').style.display='block'; document.exitPointerLock(); } }
-        else if(o.name === "door2") { if(item === "card") { o.position.y += 8; world.d2 = true; notify("Room 2 開放。"); } else notify("カード認証が必要。"); }
+        
+        if(o.name === "vase") { 
+            if(!player.inv.includes("key1")) { 
+                player.inv.push("key1"); updateUI(); 
+                notify("真鍮の鍵を入手。中には1枚のコインがあった。"); 
+            } 
+        }
+        else if(o.name === "door1") { 
+            if(item === "key1") { o.position.y += 8; world.d1 = true; notify("Room 1 開放。"); } 
+            else notify("鍵が必要だ。"); 
+        }
+        else if(o.name === "chair") { 
+            if(!world.chair) { 
+                o.position.x -= 3; world.chair = true; 
+                // 難易度を上げたヒント：(椅子の数1 + 壺のコイン1) * 441 = 882
+                notify("座面の裏:『PASS = (椅子の数 + 壺のコイン数) × 441』"); 
+            } 
+        }
+        else if(o.name === "safe") { 
+            if(world.chair) { 
+                player.isUI = true; document.getElementById('safe-ui').style.display='block'; document.exitPointerLock(); 
+            } else notify("手がかりがない。");
+        }
+        else if(o.name === "door2") { 
+            if(item === "card") { o.position.y += 8; world.d2 = true; notify("Room 2 開放。"); } 
+            else notify("カード認証が必要。"); 
+        }
         else if(o.name.startsWith("n_")) {
-            const id = o.name.split("_")[1]; world.puzzle.push(id); o.material.emissiveIntensity = 10;
+            const id = o.name.split("_")[1]; 
+            world.puzzle.push(id); 
+            
+            // タッチ時の視覚フィードバック（色を白っぽくし、発光を強める）
+            o.material.emissive.set(0xffffff); 
+            o.material.emissiveIntensity = 12;
+            
             if(world.puzzle.length === 4) {
-                if(world.puzzle.join(",") === "red,blue,yellow,green") { player.inv.push("key2"); updateUI(); notify("解錠！黄金の鍵を入手。"); }
-                else { world.puzzle = []; notify("不正解。リセットされた。"); }
+                if(world.puzzle.join(",") === "red,blue,yellow,green") { 
+                    player.inv.push("key2"); updateUI(); notify("解錠！黄金の鍵を入手。"); 
+                } else { 
+                    world.puzzle = []; notify("不正解。リセットされた。"); 
+                    // 全ての柱を元の色・輝度に戻す
+                    scene.traverse(obj => { 
+                        if(obj.name?.startsWith("n_")) {
+                            obj.material.emissive.set(obj.userData.originalColor);
+                            obj.material.emissiveIntensity = 0.6;
+                        }
+                    });
+                }
             }
         }
         else if(o.name === "exit") { if(item === "key2") { alert("脱出成功！"); location.reload(); } }
