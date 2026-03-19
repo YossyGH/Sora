@@ -6,21 +6,31 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.min.js"></script>
     <style>
         body { margin: 0; overflow: hidden; background: #1a1a1a; font-family: 'Segoe UI', 'Hiragino Kaku Gothic Pro', sans-serif; }
-        /* 開始画面のスタイル */
-        #overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); display: flex; align-items: center; justify-content: center; flex-direction: column; z-index: 1000; color: white; }
-        #start-btn { padding: 20px 60px; font-size: 24px; background: #28a745; border: none; color: white; cursor: pointer; border-radius: 50px; font-weight: bold; box-shadow: 0 0 20px rgba(40,167,69,0.5); transition: 0.3s; }
-        #start-btn:hover { background: #218838; transform: scale(1.05); }
         
-        /* UIパーツ */
-        #ui { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
+        /* 開始画面：z-indexを上げて確実にクリック可能に */
+        #overlay { 
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
+            background: rgba(0,0,0,0.9); display: flex; align-items: center; 
+            justify-content: center; flex-direction: column; z-index: 5000; color: white; 
+        }
+        #start-btn { 
+            padding: 25px 70px; font-size: 28px; background: #28a745; border: none; 
+            color: white; cursor: pointer; border-radius: 60px; font-weight: bold; 
+            box-shadow: 0 0 30px rgba(40,167,69,0.6); transition: 0.2s; pointer-events: auto;
+        }
+        #start-btn:hover { background: #2ecc71; transform: scale(1.1); }
+        #start-btn:active { transform: scale(0.95); }
+
+        /* ゲーム中UI */
+        #ui { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 100; }
         #inventory { position: absolute; top: 20px; left: 20px; display: flex; flex-direction: column; gap: 10px; pointer-events: auto; }
         .slot { width: 70px; height: 70px; border: 3px solid rgba(255,255,255,0.3); background: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; font-size: 35px; border-radius: 12px; }
         .slot.selected { border-color: #ffc107; box-shadow: 0 0 15px #ffc107; }
         #msg-box { position: absolute; bottom: 30px; width: 100%; text-align: center; }
         #text { display: inline-block; background: rgba(0,0,0,0.8); color: white; padding: 15px 40px; border-radius: 30px; border: 2px solid #28a745; font-size: 18px; min-width: 400px; }
         
-        /* 入力パネル */
-        #panel { display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #222; padding: 30px; border-radius: 20px; border: 4px solid #28a745; pointer-events: auto; text-align: center; color: white; }
+        /* パスワード入力 */
+        #panel { display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #222; padding: 30px; border-radius: 20px; border: 4px solid #28a745; pointer-events: auto; text-align: center; color: white; z-index: 1000; }
         #panel input { font-size: 30px; width: 150px; text-align: center; margin-bottom: 20px; background: #000; color: #fff; border: 1px solid #28a745; outline: none; }
         #panel button { padding: 10px 20px; cursor: pointer; background: #28a745; color: white; border: none; font-weight: bold; border-radius: 5px; }
     </style>
@@ -28,24 +38,25 @@
 <body>
 
 <div id="overlay">
-    <h1 style="font-size: 60px; margin-bottom: 20px; text-shadow: 0 0 20px rgba(255,255,255,0.2);">部屋からの脱出！</h1>
-    <p style="color: #ccc; margin-bottom: 40px;">〜 3つの試練を乗り越えろ 〜</p>
-    <button id="start-btn">ゲームスタート</button>
+    <h1 style="font-size: 60px; margin-bottom: 10px; text-shadow: 0 0 20px rgba(255,255,255,0.3);">部屋からの脱出！</h1>
+    <p style="color: #aaa; margin-bottom: 40px; letter-spacing: 2px;">全ての謎を解き明かし、黄金の鍵を掴め</p>
+    <button id="start-btn">脱出を開始する</button>
 </div>
 
 <div id="ui">
     <div id="inventory"><div id="slot-0" class="slot"></div><div id="slot-1" class="slot"></div></div>
-    <div id="msg-box"><div id="text">扉を開ける方法を探そう。</div></div>
+    <div id="msg-box"><div id="text">...暗い部屋だ。何か探さないと。</div></div>
     <div id="panel">
-        <h2 id="p-title">キーコード入力</h2>
+        <h2 id="p-title">SECURITY LOCK</h2>
         <p id="p-hint" style="font-size: 14px; color: #ffc107; margin-bottom: 15px;"></p>
         <input type="text" id="p-input" maxlength="4" autocomplete="off"><br>
-        <button id="p-ok">実行</button>
+        <button id="p-ok">解除</button>
         <button id="p-close" style="background:#555; margin-left: 10px;">閉じる</button>
     </div>
 </div>
 
 <script>
+    // --- State & Config ---
     const state = { 
         inv: [], sel: -1, d1: false, d2: false, 
         hints: { chair: false, book: false, memo: false },
@@ -53,32 +64,30 @@
     };
 
     const items = {
-        key1: { icon: "🗝️", name: "真鍮の鍵", desc: "古い洋館の鍵。書斎へ通じている。" },
-        card: { icon: "💳", name: "認証カード", desc: "電子錠を解除するための磁気カード。" },
-        key2: { icon: "🔑", name: "黄金の鍵", desc: "この場所から出るための最後の鍵。" }
+        key1: { icon: "🗝️", name: "真鍮の鍵" },
+        card: { icon: "💳", name: "認証カード" },
+        key2: { icon: "🔑", name: "黄金の鍵" }
     };
 
-    // --- Scene Setup ---
+    // --- Three.js Init ---
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
     const renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.shadowMap.enabled = true;
-    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     document.body.appendChild(renderer.domElement);
 
-    // --- Lighting (ブライト＆リアル) ---
+    // --- Lighting ---
     const amb = new THREE.AmbientLight(0xffffff, 0.7); scene.add(amb);
-    const sun = new THREE.DirectionalLight(0xffffff, 1.0);
-    sun.position.set(5, 15, 5); sun.castShadow = true;
+    const sun = new THREE.DirectionalLight(0xffffff, 1.0); sun.position.set(5, 15, 5); sun.castShadow = true;
     sun.shadow.mapSize.set(2048, 2048); scene.add(sun);
 
     // --- Rooms ---
     function buildRoom(x, col) {
         const g = new THREE.Group(); g.position.x = x;
-        const walls = new THREE.Mesh(new THREE.BoxGeometry(16, 9, 16), new THREE.MeshStandardMaterial({ color: col, side: THREE.BackSide, roughness: 0.8 }));
+        const walls = new THREE.Mesh(new THREE.BoxGeometry(16, 9, 16), new THREE.MeshStandardMaterial({ color: col, side: THREE.BackSide }));
         walls.position.y = 4.5; walls.receiveShadow = true; g.add(walls);
-        const floor = new THREE.Mesh(new THREE.PlaneGeometry(16, 16), new THREE.MeshStandardMaterial({ color: 0x3a3a3a, roughness: 0.4 }));
+        const floor = new THREE.Mesh(new THREE.PlaneGeometry(16, 16), new THREE.MeshStandardMaterial({ color: 0x333333 }));
         floor.rotation.x = -Math.PI/2; floor.receiveShadow = true; g.add(floor);
         scene.add(g); return g;
     }
@@ -86,62 +95,55 @@
     const r2 = buildRoom(22, 0x2e7d32);
     const r3 = buildRoom(44, 0x1565c0);
 
-    // --- Real Furniture: Room 1 (Desk & Vase) ---
-    const deskG = new THREE.Group();
+    // --- Room 1: Furniture ---
+    const desk = new THREE.Group();
     const top = new THREE.Mesh(new THREE.BoxGeometry(4, 0.2, 2.5), new THREE.MeshStandardMaterial({color: 0x3e2723}));
     top.position.y = 1.4; top.castShadow = true;
-    const legG = new THREE.BoxGeometry(0.2, 1.4, 0.2); const legM = new THREE.MeshStandardMaterial({color: 0x21100b});
     for(let x of [-1.8, 1.8]) for(let z of [-1, 1]) {
-        let l = new THREE.Mesh(legG, legM); l.position.set(x, 0.7, z); l.castShadow = true; deskG.add(l);
+        let l = new THREE.Mesh(new THREE.BoxGeometry(0.2, 1.4, 0.2), new THREE.MeshStandardMaterial({color: 0x21100b}));
+        l.position.set(x, 0.7, z); desk.add(l);
     }
-    deskG.add(top); deskG.position.set(-5, 0, -5); scene.add(deskG);
+    desk.add(top); desk.position.set(-5, 0, -5); scene.add(desk);
 
     const vase = new THREE.Group();
-    const v1 = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.4, 0.6), new THREE.MeshStandardMaterial({color: 0x00e5ff, roughness: 0.1, metalness: 0.3}));
+    const v1 = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.4, 0.6), new THREE.MeshStandardMaterial({color: 0x00e5ff}));
     const v2 = new THREE.Mesh(new THREE.SphereGeometry(0.4), new THREE.MeshStandardMaterial({color: 0x00e5ff}));
     v2.position.y = 0.4; vase.add(v1, v2); vase.position.set(-5, 1.8, -5); vase.name = "vase"; scene.add(vase);
 
-    // Hint 1: Red (1)
+    // Hint 1: Red Dot
     const h1 = new THREE.Mesh(new THREE.CircleGeometry(0.3, 32), new THREE.MeshBasicMaterial({color: 0xff0000}));
     h1.position.set(-7.95, 4, -2); h1.rotation.y = Math.PI/2; scene.add(h1);
 
-    const door1 = new THREE.Mesh(new THREE.BoxGeometry(0.4, 6, 3), new THREE.MeshStandardMaterial({color: 0x8d6e63, metalness: 0.5}));
+    const door1 = new THREE.Mesh(new THREE.BoxGeometry(0.4, 6, 3), new THREE.MeshStandardMaterial({color: 0x8d6e63}));
     door1.position.set(8, 3, 0); door1.name = "door1"; scene.add(door1);
 
-    // --- Real Furniture: Room 2 ---
+    // --- Room 2: Furniture ---
     const shelf = new THREE.Mesh(new THREE.BoxGeometry(6, 7.5, 1), new THREE.MeshStandardMaterial({color: 0x4e342e}));
     shelf.position.set(22, 3.75, -7.4); shelf.name = "shelf"; scene.add(shelf);
 
     const chair = new THREE.Group();
     const seat = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.3, 1.4), new THREE.MeshStandardMaterial({color: 0xe91e63}));
-    seat.position.y = 0.8; seat.castShadow = true;
+    seat.position.y = 0.8; 
     const back = new THREE.Mesh(new THREE.BoxGeometry(1.4, 1.5, 0.2), new THREE.MeshStandardMaterial({color: 0xe91e63}));
-    back.position.set(0, 1.6, -0.6); back.castShadow = true;
-    for(let x of [-0.5, 0.5]) for(let z of [-0.5, 0.5]) {
-        let l = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.8, 0.15), new THREE.MeshStandardMaterial({color: 0x222222}));
-        l.position.set(x, 0.4, z); chair.add(l);
-    }
-    chair.add(seat, back); chair.position.set(26, 0, 4); chair.name = "chair"; scene.add(chair);
+    back.position.set(0, 1.6, -0.6); chair.add(seat, back);
+    chair.position.set(26, 0, 4); chair.name = "chair"; scene.add(chair);
 
     const rabbit = new THREE.Group();
-    const body = new THREE.Mesh(new THREE.SphereGeometry(0.6), new THREE.MeshStandardMaterial({color: 0xffffff}));
     const head = new THREE.Mesh(new THREE.SphereGeometry(0.4), new THREE.MeshStandardMaterial({color: 0xffffff}));
-    head.position.set(0, 0.7, 0.2);
-    const earG = new THREE.CapsuleGeometry(0.1, 0.4, 4, 8); const earM = new THREE.MeshStandardMaterial({color: 0xffffff});
-    const earL = new THREE.Mesh(earG, earM); earL.position.set(0.15, 1.1, 0.2);
-    const earR = earL.clone(); earR.position.x = -0.15;
-    rabbit.add(body, head, earL, earR); rabbit.position.set(16, 0.6, 6); rabbit.name = "rabbit"; scene.add(rabbit);
+    head.position.y = 0.7;
+    rabbit.add(new THREE.Mesh(new THREE.SphereGeometry(0.6), new THREE.MeshStandardMaterial({color: 0xffffff})), head);
+    rabbit.position.set(16, 0.6, 6); rabbit.name = "rabbit"; scene.add(rabbit);
 
-    const safe = new THREE.Mesh(new THREE.BoxGeometry(1.2, 1.2, 1.2), new THREE.MeshStandardMaterial({color: 0x444444, metalness: 0.9, roughness: 0.1}));
+    const safe = new THREE.Mesh(new THREE.BoxGeometry(1.2, 1.2, 1.2), new THREE.MeshStandardMaterial({color: 0x444444, metalness: 0.8}));
     safe.position.set(29, 1, -5); safe.name = "safe"; scene.add(safe);
 
-    const door2 = new THREE.Mesh(new THREE.BoxGeometry(0.4, 6, 3), new THREE.MeshStandardMaterial({color: 0x263238, metalness: 0.7}));
+    const door2 = new THREE.Mesh(new THREE.BoxGeometry(0.4, 6, 3), new THREE.MeshStandardMaterial({color: 0x263238}));
     door2.position.set(30, 3, 0); door2.name = "door2"; scene.add(door2);
 
     // Sequence Hints: Yellow(2), Blue(3)
     for(let i=0; i<2; i++) {
-        let h = new THREE.Mesh(new THREE.CircleGeometry(0.25, 3), new THREE.MeshBasicMaterial({color: 0xffff00}));
-        h.position.set(19+i*0.8, 5, -7.95); scene.add(h);
+        let h = new THREE.Mesh(new THREE.CircleGeometry(0.2, 3), new THREE.MeshBasicMaterial({color: 0xffff00}));
+        h.position.set(19+i*0.6, 5, -7.95); scene.add(h);
     }
     for(let i=0; i<3; i++) {
         let h = new THREE.Mesh(new THREE.PlaneGeometry(0.3, 0.3), new THREE.MeshBasicMaterial({color: 0x00aaff}));
@@ -149,30 +151,34 @@
     }
 
     // --- Room 3: The Trials ---
-    const monument = new THREE.Mesh(new THREE.BoxGeometry(0.2, 3, 2), new THREE.MeshStandardMaterial({color: 0x222222, metalness: 0.5}));
+    const monument = new THREE.Mesh(new THREE.BoxGeometry(0.2, 3, 2), new THREE.MeshStandardMaterial({color: 0x222222}));
     monument.position.set(31, 1.5, 4); monument.name = "monument"; scene.add(monument);
 
     const nodes = {};
     const createPillar = (x, z, col, id) => {
         const g = new THREE.Group(); g.position.set(x, 0, z);
-        const base = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.5, 3), new THREE.MeshStandardMaterial({color: 0x111111}));
-        base.position.y = 1.5;
         const crystal = new THREE.Mesh(new THREE.OctahedronGeometry(0.5), new THREE.MeshStandardMaterial({color: col, emissive: col, emissiveIntensity: 0.2}));
         crystal.position.y = 3.5; crystal.name = "node_" + id; 
-        g.add(base, crystal); scene.add(g); nodes[id] = crystal;
+        g.add(new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.5, 3), new THREE.MeshStandardMaterial({color: 0x111111})).translateY(1.5), crystal);
+        scene.add(g); nodes[id] = crystal;
     };
     createPillar(40, -4, 0xff0000, "red");
     createPillar(48, 0, 0x00e5ff, "blue");
     createPillar(40, 4, 0xffff00, "yellow");
 
-    const exitDoor = new THREE.Mesh(new THREE.BoxGeometry(0.4, 6, 3), new THREE.MeshStandardMaterial({color: 0xffd700, metalness: 1, roughness: 0.1}));
+    const exitDoor = new THREE.Mesh(new THREE.BoxGeometry(0.4, 6, 3), new THREE.MeshStandardMaterial({color: 0xffd700, metalness: 1}));
     exitDoor.position.set(52, 3, 0); exitDoor.name = "exitDoor"; scene.add(exitDoor);
 
-    // --- Main Logic ---
+    // --- Interaction ---
     camera.position.set(0, 3, 8);
     let yaw = 0, pitch = 0; const keys = {};
 
-    document.getElementById('start-btn').onclick = () => { renderer.domElement.requestPointerLock(); document.getElementById('overlay').style.display='none'; };
+    document.getElementById('start-btn').addEventListener('click', () => {
+        renderer.domElement.requestPointerLock();
+        document.getElementById('overlay').style.display = 'none';
+        notify("脱出の鍵を探せ...");
+    });
+
     window.onkeydown = (e) => {
         keys[e.code] = true;
         if (e.code === 'Space' && state.inv.length > 0) { state.sel=(state.sel+1)%state.inv.length; updateUI(); notify(items[state.inv[state.sel]].name + " を装備中"); }
@@ -187,23 +193,21 @@
         const hits = ray.intersectObjects(scene.children, true);
         if (hits.length > 0 && hits[0].distance < 6) {
             let o = hits[0].object;
-            // Room 1
             if (o.parent?.name === "vase" || o.name === "vase") {
-                if(!state.inv.includes("key1")){ state.inv.push("key1"); state.sel=0; updateUI(); notify("花瓶の中から『真鍮の鍵』を手に入れた！"); }
+                if(!state.inv.includes("key1")){ state.inv.push("key1"); state.sel=0; updateUI(); notify("花瓶の中から『真鍮の鍵』を発見！"); }
             }
             else if (o.name === "door1") {
                 if (isShift && state.inv[state.sel]==="key1") { state.d1=true; o.position.y+=8; notify("鍵が開いた。"); }
-                else notify("鍵が必要なようだ。");
+                else notify("鍵が必要だ。");
             }
-            // Room 2
-            else if (o.parent?.name === "chair") { o.parent.position.z += 2; state.hints.chair = true; notify("椅子の下に『3』と『I』の刻印がある。"); }
-            else if (o.name === "shelf") { state.hints.book = true; notify("本棚の隅に『8』と『II』の刻印。"); }
-            else if (o.parent?.name === "rabbit") { notify("ウサギ『足元を調べて。メモ（4 / III）があるよ。』"); state.hints.memo=true; }
+            else if (o.parent?.name === "chair") { o.parent.position.z += 2; state.hints.chair = true; notify("椅子に『3 / I』の刻印。"); }
+            else if (o.name === "shelf") { state.hints.book = true; notify("本棚に『8 / II』の刻印。"); }
+            else if (o.parent?.name === "rabbit") { state.hints.memo=true; notify("ウサギ『足元に（4 / III）のメモがあるよ』"); }
             else if (o.name === "safe") {
                 if(state.hints.chair && state.hints.book && state.hints.memo) {
-                    showInput("金庫のロック", "刻印の順序: I → II → III", (val) => {
-                        if(val === "384") { state.inv.push("card"); updateUI(); notify("『認証カード』を入手した！"); hideInput(); }
-                        else notify("エラー：コードが一致しません。");
+                    showInput("金庫", "I → II → III", (val) => {
+                        if(val === "384") { state.inv.push("card"); updateUI(); notify("『認証カード』を入手。"); hideInput(); }
+                        else notify("エラー：番号が違う。");
                     });
                 } else notify("まだ情報が足りない...");
             }
@@ -211,26 +215,23 @@
                 if (isShift && state.inv[state.sel]==="card") { state.d2=true; o.position.y+=8; notify("認証完了。地下室へ。"); }
                 else notify("認証カードが必要だ。");
             }
-            // Room 3
             else if (o.name === "monument") { notify("石碑：『色の理、数は順序なり。壁の印を数えよ。』"); }
             else if (o.name.startsWith("node_")) {
                 const color = o.name.replace("node_", "");
-                state.r3_seq.push(color);
-                o.material.emissiveIntensity = 2.5; 
+                state.r3_seq.push(color); o.material.emissiveIntensity = 2.5; 
                 for(let i=0; i<state.r3_seq.length; i++) {
                     if(state.r3_seq[i] !== state.r3_correct[i]) {
-                        state.r3_seq = []; notify("エラー：シーケンスが切断された。"); 
-                        Object.values(nodes).forEach(n => n.material.emissiveIntensity = 0.2); 
-                        return;
+                        state.r3_seq = []; notify("エラー。やり直しだ。"); 
+                        Object.values(nodes).forEach(n => n.material.emissiveIntensity = 0.2); return;
                     }
                 }
                 if(state.r3_seq.length === 3) {
-                    if(!state.inv.includes("key2")) { state.inv.push("key2"); updateUI(); notify("装置が起動し、『黄金の鍵』が生成された！"); }
+                    if(!state.inv.includes("key2")) { state.inv.push("key2"); updateUI(); notify("『黄金の鍵』を手に入れた！"); }
                 }
             }
             else if (o.name === "exitDoor") {
                 if (isShift && state.inv[state.sel]==="key2") { o.position.y+=8; notify("脱出成功！おめでとう！"); }
-                else notify("脱出には黄金の鍵が必要だ。");
+                else notify("黄金の鍵が必要だ。");
             }
         }
     }
