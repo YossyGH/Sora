@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <title>THE THREE ROOMS - COMPLETE EDITION</title>
+    <title>THE THREE ROOMS - FINAL REVISION</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <style>
         body { margin: 0; overflow: hidden; background: #000; font-family: sans-serif; }
@@ -13,19 +13,20 @@
         .slot { width: 85px; height: 85px; background: rgba(20,20,20,0.9); border: 2px solid #444; border-radius: 10px; display: flex; flex-direction: column; align-items: center; justify-content: center; color: white; }
         .slot.active { border-color: #e74c3c; background: rgba(231,76,60,0.1); }
         #msg-box { position: absolute; bottom: 50px; width: 100%; text-align: center; pointer-events: none; }
-        #msg-text { display: inline-block; background: rgba(0,0,0,0.9); color: white; padding: 15px 35px; border-bottom: 3px solid #e74c3c; font-size: 18px; max-width: 80%; }
+        #msg-text { display: inline-block; background: rgba(0,0,0,0.95); color: white; padding: 15px 35px; border: 1px solid #e74c3c; font-size: 18px; max-width: 80%; border-radius: 5px; }
         #safe-ui { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #2c3e50; padding: 25px; border-radius: 10px; z-index: 1500; border: 3px solid #bdc3c7; }
         #safe-disp { font-size: 30px; width: 160px; text-align: center; margin-bottom: 15px; background: #000; color: #2ecc71; border: none; }
         .numpad { display: grid; grid-template-columns: repeat(3, 60px); gap: 10px; }
         .numpad button { height: 60px; cursor: pointer; background: #34495e; color: white; border: 1px solid #7f8c8d; font-size: 20px; }
-        #telop { position: fixed; top: 35%; width: 100%; text-align: center; color: #ffeb3b; font-size: 40px; font-weight: bold; opacity: 0; transition: opacity 1s; pointer-events: none; z-index: 2000; text-shadow: 0 0 15px rgba(0,0,0,1); }
+        /* ルーム3専用の巨大テロップ */
+        #telop { position: fixed; top: 35%; width: 100%; text-align: center; color: #ffeb3b; font-size: 45px; font-weight: bold; opacity: 0; transition: opacity 1.5s; pointer-events: none; z-index: 2000; text-shadow: 4px 4px 15px #000; }
     </style>
 </head>
 <body>
 
 <div id="overlay">
-    <h1 style="letter-spacing: 5px;">THE THREE ROOMS</h1>
-    <button style="padding:15px 50px; cursor:pointer; font-size:18px;" onclick="startGame()">探索を開始する</button>
+    <h1>THE THREE ROOMS</h1>
+    <button style="padding:15px 50px; cursor:pointer;" onclick="startGame()">探索を開始</button>
 </div>
 
 <div id="guide">
@@ -41,7 +42,7 @@
 </div>
 
 <div id="telop">ヒント：『黄色は赤の直後ではない』</div>
-<div id="msg-box"><div id="msg-text">この場所から脱出する方法を見つけよう。</div></div>
+<div id="msg-box"><div id="msg-text">この奇妙な施設から脱出しなければならない。</div></div>
 
 <div id="safe-ui">
     <input type="text" id="safe-disp" readonly>
@@ -52,12 +53,12 @@
 <script>
 let scene, camera, renderer, yaw = 0, pitch = 0, keys = {};
 const player = { inv: [null, null, null], sel: 0, isUI: false, r3: false, hasCoin: false };
-const world = { d1: false, d2: false, chair: false, puzzle: [] };
+const world = { d1: false, d2: false, chairMoved: false, puzzle: [] };
 
 const ITEM_DATA = {
-    key1: { icon: "🗝️", name: "真鍮の鍵", desc: "古い鍵だ。ヒント：『赤は青より前だが、直前（隣）ではない』" },
-    card: { icon: "💳", name: "認証カード", desc: "Room 2のカード。ヒント：『青は2番目だ』" },
-    key2: { icon: "🔑", name: "黄金の鍵", desc: "脱出用の重い鍵。金の扉に使おう。" }
+    key1: { icon: "🗝️", name: "真鍮の鍵", desc: "古びた鍵。裏側に刻印：『赤は青より前。だが、隣り合ってはいない』" },
+    card: { icon: "💳", name: "認証カード", desc: "電子ロック用カード。印字：『青は2番目だ』" },
+    key2: { icon: "🔑", name: "黄金の鍵", desc: "最終脱出用の重厚な鍵。金の扉を開けられる。" }
 };
 
 function startGame() {
@@ -75,24 +76,30 @@ function startGame() {
 
     createRoom(0, 0x2c1e14); createRoom(22, 0x0f260f); createRoom(44, 0x0f0f26);
 
+    // Room 1: 壺 (vase)
     const v = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.4, 1), new THREE.MeshStandardMaterial({color: 0x00bcd4}));
     v.position.set(-6, 1.5, -6); v.name = "vase"; scene.add(v);
 
+    // Door 1
     const d1 = new THREE.Mesh(new THREE.BoxGeometry(0.4, 6, 3), new THREE.MeshStandardMaterial({color: 0x3e2723}));
     d1.position.set(8, 3, 0); d1.name = "door1"; scene.add(d1);
 
+    // Room 2: 椅子 (chair) & 金庫 (safe)
     const ch = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.5, 1.5), new THREE.MeshStandardMaterial({color: 0x880e4f}));
     ch.position.set(24, 0.25, 5); ch.name = "chair"; scene.add(ch);
 
     const s = new THREE.Mesh(new THREE.BoxGeometry(1.2, 1.2, 1.2), new THREE.MeshStandardMaterial({color: 0x111}));
     s.position.set(29, 0.6, -6); s.name = "safe"; scene.add(s);
     
+    // Door 2
     const d2 = new THREE.Mesh(new THREE.BoxGeometry(0.4, 6, 3), new THREE.MeshStandardMaterial({color: 0x000}));
     d2.position.set(30, 3, 0); d2.name = "door2"; scene.add(d2);
 
+    // Room 3: 柱
     createP(40, -5, 0xff3333, "red"); createP(46, -5, 0x3333ff, "blue");
     createP(40, 5, 0xffff33, "yellow"); createP(46, 5, 0x33ff33, "green");
 
+    // Exit
     const ex = new THREE.Mesh(new THREE.BoxGeometry(0.4, 6, 3), new THREE.MeshStandardMaterial({color: 0xffd700}));
     ex.position.set(52, 3, 0); ex.name = "exit"; scene.add(ex);
 
@@ -125,7 +132,7 @@ function addToInv(id) {
     const emptySlot = player.inv.indexOf(null);
     if (emptySlot !== -1) {
         player.inv[emptySlot] = id;
-        if(id === "key2") player.sel = emptySlot;
+        if(id === "key2") player.sel = 2; // 黄金の鍵だけスロット3へ
         updateUI();
     }
 }
@@ -138,55 +145,57 @@ function interact() {
         
         if(o.name === "vase") { 
             addToInv("key1"); player.hasCoin = true;
-            notify("壺の底から『真鍮の鍵』と『古いコイン1枚』を拾い上げた。"); 
+            notify("壺の中に『真鍮の鍵』と『古い銀貨1枚』が落ちていた。"); 
         }
         else if(o.name === "door1") { 
-            if(item === "key1") { o.position.y += 8; world.d1 = true; notify("Room 1の扉が開いた。"); } 
-            else notify("扉は閉まっている。真鍮の鍵が必要だ。"); 
+            if(item === "key1") { o.position.y += 8; world.d1 = true; notify("Room 1が開放された。"); } 
+            else notify("扉には古い鍵穴がある。真鍮の鍵が必要だ。"); 
         }
         else if(o.name === "chair") { 
-            if(!world.chair) { 
-                o.position.x -= 3; world.chair = true; 
-                notify("椅子を動かした。座面の裏に何かが刻まれている。"); 
+            if(!world.chairMoved) { 
+                o.position.x -= 3; world.chairMoved = true; 
+                notify("重い椅子を動かした。座面の下に何かが書いてある..."); 
             } else {
-                notify("座面裏の刻印：『PASS = (椅子の数1 + コイン数1) × 441』");
+                // ここで計算式をはっきり表示
+                notify("座面裏の走り書き：『PASS = (椅子の数1 + コイン数1) × 441』");
             }
         }
         else if(o.name === "safe") { 
-            if(world.chair) { player.isUI = true; document.getElementById('safe-ui').style.display='block'; document.exitPointerLock(); }
-            else notify("頑丈な金庫だ。番号が必要だ。");
+            if(world.chairMoved) { 
+                player.isUI = true; document.getElementById('safe-ui').style.display='block'; document.exitPointerLock(); 
+            } else notify("金庫だ。どこかに解除コードがあるはずだ。");
         }
         else if(o.name === "door2") { 
-            if(item === "card") { o.position.y += 8; world.d2 = true; notify("Room 2の扉が開いた。"); } 
-            else notify("認証システムが赤く光っている。カードが必要だ。"); 
+            if(item === "card") { o.position.y += 8; world.d2 = true; notify("Room 2が開放された。"); } 
+            else notify("電子ロックがかかっている。カードが必要だ。"); 
         }
         else if(o.name.startsWith("n_")) {
             const id = o.name.split("_")[1]; world.puzzle.push(id); 
             o.material.emissive.set(0xffffff); o.material.emissiveIntensity = 12;
             if(world.puzzle.length === 4) {
                 if(world.puzzle.join(",") === "red,blue,yellow,green") { 
-                    addToInv("key2"); notify("パズル正解！柱の中から『黄金の鍵』が現れた。"); 
+                    addToInv("key2"); notify("論理のパズルを解いた！『黄金の鍵』を入手。"); 
                 } else { 
-                    world.puzzle = []; notify("不正解だ。光が消えた。"); 
+                    world.puzzle = []; notify("光が消えた。順序が違うようだ。"); 
                     scene.traverse(obj => { if(obj.name?.startsWith("n_")) { obj.material.emissive.set(obj.userData.originalColor); obj.material.emissiveIntensity = 0.6; } });
                 }
             }
         }
         else if(o.name === "exit") { 
-            if(item === "key2") { alert("脱出成功！論理の迷宮を制覇しました！"); location.reload(); } 
-            else notify("金の扉だ。相応しい鍵が必要だ。");
+            if(item === "key2") { alert("脱出成功！論理を制しました！"); location.reload(); } 
+            else notify("黄金の扉だ。相応しい鍵が必要だ。");
         }
     }
 }
 
 function checkSafe() {
     if(document.getElementById('safe-disp').value === "882") {
-        addToInv("card"); notify("金庫が開いた！『認証カード』を手に入れた。"); 
+        addToInv("card"); notify("金庫が開いた！『認証カード』を入手。"); 
         player.isUI = false; document.getElementById('safe-ui').style.display='none';
         renderer.domElement.requestPointerLock();
     } else { 
         document.getElementById('safe-disp').value = ""; 
-        notify("番号が違うようだ。");
+        notify("エラー：番号が正しくありません。");
     }
 }
 
@@ -209,13 +218,13 @@ function animate() {
         if(keys['ArrowLeft']) move.add(rgt.negate()); if(keys['ArrowRight']) move.add(rgt);
         if(move.length() > 0) camera.position.addScaledVector(move.normalize(), 0.18);
 
-        // Room 3突入判定: x座標が36を超えた時にテロップ表示
+        // Room 3突入判定: x座標36のラインでテロップ発火
         if(!player.r3 && camera.position.x > 36) {
             player.r3 = true;
             const t = document.getElementById('telop');
             t.style.opacity = "1";
             setTimeout(() => { t.style.opacity = "0"; }, 6000);
-            notify("新しい空間へ入った...壁にヒントが浮かんでいる。");
+            notify("新しい空間だ。空中に文字が浮かび上がった。");
         }
 
         camera.position.x = Math.max(-7, Math.min(51, camera.position.x));
