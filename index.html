@@ -2,82 +2,72 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <title>THE THREE ROOMS - 3 SLOTS EDITION</title>
+    <title>THE THREE ROOMS - FIXED INVENTORY</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <style>
         body { margin: 0; overflow: hidden; background: #000; font-family: 'Hiragino Kaku Gothic ProN', 'Meiryo', sans-serif; }
         #overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: radial-gradient(circle, #2c3e50, #000); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 10000; color: white; }
-        .btn-start { background: #27ae60; color: white; border: none; padding: 20px 60px; font-size: 24px; font-weight: bold; border-radius: 50px; cursor: pointer; margin-top: 20px; box-shadow: 0 5px 15px rgba(0,0,0,0.5); }
-        
-        #guide { position: absolute; top: 20px; right: 20px; background: rgba(0,0,0,0.85); color: #fff; padding: 15px; border-radius: 8px; border-left: 5px solid #e74c3c; font-size: 13px; line-height: 1.7; z-index: 500; pointer-events: none; }
-        .k { background: #444; padding: 2px 6px; border-radius: 4px; color: #ffeb3b; font-weight: bold; font-family: monospace; }
-
-        /* スロットを3つに増やしました */
+        .btn-start { background: #27ae60; color: white; border: none; padding: 20px 60px; font-size: 24px; font-weight: bold; border-radius: 50px; cursor: pointer; margin-top: 20px; }
+        #guide { position: absolute; top: 20px; right: 20px; background: rgba(0,0,0,0.85); color: #fff; padding: 15px; border-radius: 8px; border-left: 5px solid #e74c3c; font-size: 13px; z-index: 500; pointer-events: none; }
+        .k { background: #444; padding: 2px 6px; border-radius: 4px; color: #ffeb3b; font-weight: bold; }
         #inv { position: absolute; top: 20px; left: 20px; display: flex; flex-direction: column; gap: 10px; z-index: 500; }
-        .slot { width: 90px; height: 90px; background: rgba(15,15,15,0.95); border: 2px solid #444; border-radius: 12px; display: flex; flex-direction: column; align-items: center; justify-content: center; color: white; transition: 0.2s; }
-        .slot.active { border-color: #e74c3c; box-shadow: 0 0 15px rgba(231,76,60,0.5); background: rgba(231,76,60,0.1); }
-        
+        .slot { width: 90px; height: 90px; background: rgba(15,15,15,0.95); border: 2px solid #444; border-radius: 12px; display: flex; flex-direction: column; align-items: center; justify-content: center; color: white; }
+        .slot.active { border-color: #e74c3c; box-shadow: 0 0 15px rgba(231,76,60,0.5); }
         #msg-box { position: absolute; bottom: 40px; width: 100%; text-align: center; pointer-events: none; }
-        #msg-text { display: inline-block; background: rgba(0,0,0,0.9); color: white; padding: 15px 40px; border-bottom: 3px solid #e74c3c; font-size: 18px; border-radius: 4px; }
-
+        #msg-text { display: inline-block; background: rgba(0,0,0,0.9); color: white; padding: 15px 40px; border-bottom: 3px solid #e74c3c; font-size: 18px; }
         #inspect { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.98); z-index: 2000; flex-direction: column; align-items: center; justify-content: center; color: white; text-align: center; }
-        #safe-ui { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #2c3e50; padding: 30px; border-radius: 15px; z-index: 1500; border: 4px solid #bdc3c7; text-align: center; }
-        #safe-disp { font-size: 40px; width: 180px; background: #000; color: #2ecc71; text-align: center; margin-bottom: 15px; border: none; font-family: monospace; }
+        #safe-ui { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #2c3e50; padding: 30px; border-radius: 15px; z-index: 1500; border: 4px solid #bdc3c7; }
+        #safe-disp { font-size: 40px; width: 180px; background: #000; color: #2ecc71; text-align: center; margin-bottom: 15px; border: none; }
         .numpad { display: grid; grid-template-columns: repeat(3, 70px); gap: 10px; }
-        .numpad button { height: 60px; font-size: 20px; cursor: pointer; background: #34495e; color: white; border: 1px solid #7f8c8d; }
-
-        #telop { position: fixed; top: 30%; width: 100%; text-align: center; color: #e74c3c; font-size: 45px; font-weight: bold; opacity: 0; transition: 1.5s; pointer-events: none; z-index: 1000; text-shadow: 0 0 20px rgba(231,76,60,0.8); }
+        .numpad button { height: 60px; font-size: 20px; cursor: pointer; background: #34495e; color: white; }
+        #telop { position: fixed; top: 30%; width: 100%; text-align: center; color: #e74c3c; font-size: 45px; font-weight: bold; opacity: 0; transition: 1.5s; pointer-events: none; }
     </style>
 </head>
 <body>
 
 <div id="overlay">
-    <h1 style="font-size: 45px; letter-spacing: 5px;">THE THREE ROOMS</h1>
-    <p>すべての謎を解き、光の射す方へ。</p>
+    <h1>THE THREE ROOMS</h1>
     <button class="btn-start" onclick="startGame()">探索を開始</button>
 </div>
 
 <div id="guide">
-    <div style="margin-bottom: 5px; color: #e74c3c; font-weight: bold;">【 操作マニュアル 】</div>
-    <span class="k">↑ ↓ ← →</span> 移動<br>
-    <span class="k">マウス移動</span> 視点操作<br>
-    <span class="k">SPACE</span> 調べる / 使う<br>
-    <span class="k">TAB</span> アイテム選択<br>
+    <span class="k">↑ ↓ ← →</span> 移動 / <span class="k">マウス</span> 視点操作<br>
+    <span class="k">SPACE</span> 調べる / <span class="k">TAB</span> アイテム選択<br>
     <span class="k">SHIFT</span> 詳細を確認
 </div>
 
 <div id="inv">
-    <div id="s0" class="slot active"><div style="font-size:35px"></div><div style="font-size:10px; margin-top:5px;">Slot 1</div></div>
-    <div id="s1" class="slot"><div style="font-size:35px"></div><div style="font-size:10px; margin-top:5px;">Slot 2</div></div>
-    <div id="s2" class="slot"><div style="font-size:35px"></div><div style="font-size:10px; margin-top:5px;">Slot 3</div></div>
+    <div id="s0" class="slot active"><div style="font-size:35px"></div><div style="font-size:10px">Slot 1</div></div>
+    <div id="s1" class="slot"><div style="font-size:35px"></div><div style="font-size:10px">Slot 2</div></div>
+    <div id="s2" class="slot"><div style="font-size:35px"></div><div style="font-size:10px">Slot 3</div></div>
 </div>
 
 <div id="telop">ROOM 3: 断絶された論理</div>
-<div id="msg-box"><div id="msg-text">手がかりは揃ったはずだ。</div></div>
+<div id="msg-box"><div id="msg-text">探索を開始せよ。</div></div>
 
 <div id="inspect">
-    <div style="background:#111; padding:50px; border:1px solid #444; border-radius:20px; max-width: 500px;">
-        <div id="ins-icon" style="font-size: 100px; margin-bottom: 20px;"></div>
+    <div style="background:#111; padding:50px; border:1px solid #444; border-radius:20px;">
+        <div id="ins-icon" style="font-size: 100px;"></div>
         <h2 id="ins-title" style="color: #e74c3c;"></h2>
-        <p id="ins-desc" style="line-height: 1.8; color: #ccc; font-size: 18px;"></p>
-        <p style="color:#555; margin-top: 30px;">[ SHIFT ] キーで閉じる</p>
+        <p id="ins-desc" style="max-width:500px; color:#ccc; font-size:18px; line-height:1.6;"></p>
+        <p style="color:#555;">[ SHIFT ] 閉じる</p>
     </div>
 </div>
 
 <div id="safe-ui">
     <input type="text" id="safe-disp" readonly>
     <div class="numpad" id="btns"></div>
-    <button onclick="checkSafe()" style="width:100%; margin-top:15px; padding:15px; background:#27ae60; color:white; border:none; font-weight:bold; cursor:pointer;">解除</button>
+    <button onclick="checkSafe()" style="width:100%; margin-top:15px; padding:15px; background:#27ae60; color:white;">解除</button>
 </div>
 
 <script>
 let scene, camera, renderer, yaw = 0, pitch = 0, keys = {};
-const player = { inv: [], sel: 0, isUI: false, inIns: false, r3: false };
+const player = { inv: [null, null, null], sel: 0, isUI: false, inIns: false, r3: false };
 const world = { d1: false, d2: false, chair: false, puzzle: [] };
 
 const ITEM_DATA = {
-    key1: { icon: "🗝️", name: "真鍮の鍵", desc: "『赤は青より前。ただし、青よりずっと前（隣ではない）だ』" },
-    card: { icon: "💳", name: "認証カード", desc: "『青は2番目だ』" },
+    key1: { icon: "🗝️", name: "真鍮の鍵", desc: "裏側に刻印がある...『赤は青より前。ただし、青よりずっと前（隣ではない）だ』" },
+    card: { icon: "💳", name: "認証カード", desc: "印字されている...『青は2番目だ』" },
     key2: { icon: "🔑", name: "黄金の鍵", desc: "最終脱出用の鍵。金の扉に使え。" }
 };
 
@@ -156,6 +146,17 @@ function createP(x, z, col, id) {
     g.add(o); g.position.set(x, 1.75, z); scene.add(g);
 }
 
+function addToInv(id) {
+    if (player.inv.includes(id)) return;
+    const emptySlot = player.inv.indexOf(null);
+    if (emptySlot !== -1) {
+        player.inv[emptySlot] = id;
+        // 黄金の鍵(key2)の時だけ自動でそのスロットを選択
+        if(id === "key2") player.sel = emptySlot;
+        updateUI();
+    }
+}
+
 function interact() {
     const r = new THREE.Raycaster(); r.setFromCamera(new THREE.Vector2(0,0), camera);
     const h = r.intersectObjects(scene.children, true);
@@ -163,16 +164,14 @@ function interact() {
         const o = h[0].object; const item = player.inv[player.sel];
         
         if(o.name === "vase") { 
-            if(!player.inv.includes("key1")) { 
-                player.inv.push("key1"); updateUI(); notify("真鍮の鍵とコインを入手。"); 
-            } 
+            addToInv("key1"); notify("真鍮の鍵とコインを入手。"); 
         }
         else if(o.name === "door1") { 
             if(item === "key1") { o.position.y += 8; world.d1 = true; notify("Room 1 開放。"); } 
-            else notify("鍵が必要だ。"); 
+            else notify("鍵を手に持つ必要がある。"); 
         }
         else if(o.name === "chair") { 
-            if(!world.chair) { o.position.x -= 3; world.chair = true; notify("PASS = (椅子の数 + コイン数) × 441"); } 
+            if(!world.chair) { o.position.x -= 3; world.chair = true; notify("PASS = (椅子の数1 + コイン数1) × 441"); } 
         }
         else if(o.name === "safe") { 
             if(world.chair) { player.isUI = true; document.getElementById('safe-ui').style.display='block'; document.exitPointerLock(); } 
@@ -187,17 +186,14 @@ function interact() {
             
             if(world.puzzle.length === 4) {
                 if(world.puzzle.join(",") === "red,blue,yellow,green") { 
-                    player.inv.push("key2"); 
-                    player.sel = 2; // 黄金の鍵を自動選択（スロット3）
-                    updateUI(); 
-                    notify("パズル解錠！黄金の鍵をスロット3に入手した。"); 
+                    addToInv("key2"); notify("パズル解錠！黄金の鍵を入手。"); 
                 } else { 
-                    world.puzzle = []; notify("不正解。リセットされた。"); 
+                    world.puzzle = []; notify("不正解。リセット。"); 
                     scene.traverse(obj => { if(obj.name?.startsWith("n_")) { obj.material.emissive.set(obj.userData.originalColor); obj.material.emissiveIntensity = 0.6; } });
                 }
             }
         }
-        else if(o.name === "exit") { if(item === "key2") { alert("脱出成功！おめでとう！"); location.reload(); } else notify("黄金の鍵が必要。"); }
+        else if(o.name === "exit") { if(item === "key2") { alert("脱出成功！"); location.reload(); } else notify("黄金の鍵を手に持て。"); }
     }
 }
 
@@ -213,8 +209,8 @@ function toggleInspect() {
 
 function checkSafe() {
     if(document.getElementById('safe-disp').value === "882") {
-        player.inv.push("card"); updateUI(); notify("カードを入手。"); player.isUI = false; document.getElementById('safe-ui').style.display='none';
-    } else { document.getElementById('safe-disp').value = ""; notify("暗証番号が違う。"); }
+        addToInv("card"); notify("認証カードを入手。"); player.isUI = false; document.getElementById('safe-ui').style.display='none';
+    } else { document.getElementById('safe-disp').value = ""; notify("番号が違う。"); }
 }
 
 function updateUI() {
@@ -225,6 +221,8 @@ function updateUI() {
         s.className = (i === player.sel) ? "slot active" : "slot";
     }
 }
+
+function notify(t) { document.getElementById('msg-text').innerText = t; }
 
 function animate() {
     if(!player.isUI && !player.inIns) {
@@ -239,7 +237,7 @@ function animate() {
             player.r3 = true;
             const t = document.getElementById('telop'); t.style.opacity = 1;
             setTimeout(()=>t.style.opacity = 0, 4000);
-            notify("最後のヒント：『黄色は赤の直後ではない』");
+            notify("ヒント：『黄色は赤の直後ではない』");
         }
         camera.position.x = Math.max(-7, Math.min(51, camera.position.x));
         camera.position.z = Math.max(-7, Math.min(7, camera.position.z));
