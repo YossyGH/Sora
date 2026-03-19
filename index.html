@@ -6,15 +6,20 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.min.js"></script>
     <style>
         body { margin: 0; overflow: hidden; background: #1a1a1a; font-family: 'Segoe UI', 'Hiragino Kaku Gothic Pro', sans-serif; }
+        /* 開始画面のスタイル */
         #overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); display: flex; align-items: center; justify-content: center; flex-direction: column; z-index: 1000; color: white; }
         #start-btn { padding: 20px 60px; font-size: 24px; background: #28a745; border: none; color: white; cursor: pointer; border-radius: 50px; font-weight: bold; box-shadow: 0 0 20px rgba(40,167,69,0.5); transition: 0.3s; }
         #start-btn:hover { background: #218838; transform: scale(1.05); }
+        
+        /* UIパーツ */
         #ui { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
         #inventory { position: absolute; top: 20px; left: 20px; display: flex; flex-direction: column; gap: 10px; pointer-events: auto; }
         .slot { width: 70px; height: 70px; border: 3px solid rgba(255,255,255,0.3); background: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; font-size: 35px; border-radius: 12px; }
         .slot.selected { border-color: #ffc107; box-shadow: 0 0 15px #ffc107; }
         #msg-box { position: absolute; bottom: 30px; width: 100%; text-align: center; }
         #text { display: inline-block; background: rgba(0,0,0,0.8); color: white; padding: 15px 40px; border-radius: 30px; border: 2px solid #28a745; font-size: 18px; min-width: 400px; }
+        
+        /* 入力パネル */
         #panel { display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #222; padding: 30px; border-radius: 20px; border: 4px solid #28a745; pointer-events: auto; text-align: center; color: white; }
         #panel input { font-size: 30px; width: 150px; text-align: center; margin-bottom: 20px; background: #000; color: #fff; border: 1px solid #28a745; outline: none; }
         #panel button { padding: 10px 20px; cursor: pointer; background: #28a745; color: white; border: none; font-weight: bold; border-radius: 5px; }
@@ -81,7 +86,7 @@
     const r2 = buildRoom(22, 0x2e7d32);
     const r3 = buildRoom(44, 0x1565c0);
 
-    // --- Furniture: Room 1 (Desk & Vase) ---
+    // --- Real Furniture: Room 1 (Desk & Vase) ---
     const deskG = new THREE.Group();
     const top = new THREE.Mesh(new THREE.BoxGeometry(4, 0.2, 2.5), new THREE.MeshStandardMaterial({color: 0x3e2723}));
     top.position.y = 1.4; top.castShadow = true;
@@ -103,7 +108,7 @@
     const door1 = new THREE.Mesh(new THREE.BoxGeometry(0.4, 6, 3), new THREE.MeshStandardMaterial({color: 0x8d6e63, metalness: 0.5}));
     door1.position.set(8, 3, 0); door1.name = "door1"; scene.add(door1);
 
-    // --- Furniture: Room 2 (Shelf, Chair, Rabbit, Safe) ---
+    // --- Real Furniture: Room 2 ---
     const shelf = new THREE.Mesh(new THREE.BoxGeometry(6, 7.5, 1), new THREE.MeshStandardMaterial({color: 0x4e342e}));
     shelf.position.set(22, 3.75, -7.4); shelf.name = "shelf"; scene.add(shelf);
 
@@ -187,7 +192,7 @@
                 if(!state.inv.includes("key1")){ state.inv.push("key1"); state.sel=0; updateUI(); notify("花瓶の中から『真鍮の鍵』を手に入れた！"); }
             }
             else if (o.name === "door1") {
-                if (isShift && state.inv[state.sel]==="key1") { state.d1=true; o.position.y+=8; notify("扉が開いた。"); }
+                if (isShift && state.inv[state.sel]==="key1") { state.d1=true; o.position.y+=8; notify("鍵が開いた。"); }
                 else notify("鍵が必要なようだ。");
             }
             // Room 2
