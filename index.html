@@ -2,162 +2,157 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <title>脱出ゲーム：THE THREE ROOMS</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.min.js"></script>
+    <title>脱出ゲーム：THE THREE ROOMS - 決定版</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <style>
         body { margin: 0; overflow: hidden; background: #000; font-family: 'Hiragino Kaku Gothic ProN', 'Meiryo', sans-serif; }
         
-        /* 開始画面 */
-        #boot-layer {
+        /* 起動画面：日本語 */
+        #loading-overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: radial-gradient(circle, #34495e 0%, #000 100%);
+            background: radial-gradient(circle, #2c3e50, #000);
             display: flex; flex-direction: column; align-items: center; justify-content: center;
-            z-index: 10000; color: #fff; text-align: center;
+            z-index: 10000; color: white; text-align: center;
         }
-        .start-trigger {
-            margin-top: 30px; padding: 20px 60px; font-size: 24px; font-weight: bold;
-            background: #27ae60; color: white; border: none; border-radius: 50px;
-            cursor: pointer; box-shadow: 0 0 30px rgba(39,174,96,0.6);
-            transition: 0.3s;
+        .start-button {
+            background: #27ae60; color: white; border: none; padding: 20px 50px;
+            font-size: 24px; font-weight: bold; border-radius: 10px; cursor: pointer;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3); transition: 0.3s; margin-top: 20px;
         }
-        .start-trigger:hover { transform: scale(1.1); background: #2ecc71; }
+        .start-button:hover { background: #2ecc71; transform: scale(1.05); }
 
-        /* 右上：操作ガイド（日本語） */
-        #gui-guide {
+        /* 右上：操作ガイド（常駐） */
+        #operation-guide {
             position: absolute; top: 20px; right: 20px; background: rgba(0,0,0,0.8);
-            color: #fff; padding: 15px; border-radius: 10px; border: 2px solid #27ae60;
-            font-size: 14px; line-height: 1.8; z-index: 100; pointer-events: none;
+            color: #fff; padding: 15px; border-radius: 8px; border-left: 5px solid #2ecc71;
+            font-size: 14px; line-height: 1.8; z-index: 500; pointer-events: none;
         }
-        .key-box { background: #555; padding: 2px 8px; border-radius: 4px; color: #2ecc71; font-weight: bold; margin-right: 5px; }
+        .key { background: #444; padding: 2px 6px; border-radius: 4px; color: #2ecc71; font-weight: bold; }
 
-        /* 左側：持ち物（日本語） */
-        #inv-container { position: absolute; top: 20px; left: 20px; display: flex; flex-direction: column; gap: 25px; z-index: 100; }
-        .inv-slot { 
-            width: 90px; height: 90px; background: rgba(30,30,30,0.9); border: 3px solid #444; 
-            border-radius: 15px; display: flex; align-items: center; justify-content: center; 
-            font-size: 45px; transition: 0.3s; position: relative;
+        /* 左側：アイテムスロット */
+        #inventory-ui { position: absolute; top: 20px; left: 20px; display: flex; flex-direction: column; gap: 20px; z-index: 500; }
+        .item-slot { 
+            width: 90px; height: 90px; background: rgba(20,20,20,0.9); border: 2px solid #555; 
+            border-radius: 12px; display: flex; flex-direction: column; align-items: center; justify-content: center; 
+            transition: 0.3s; position: relative;
         }
-        .inv-slot.active { border-color: #2ecc71; box-shadow: 0 0 20px rgba(46,204,113,0.5); transform: scale(1.05); }
-        .inv-name { position: absolute; bottom: -25px; font-size: 12px; color: #eee; white-space: nowrap; text-shadow: 1px 1px 2px #000; }
+        .item-slot.selected { border-color: #2ecc71; box-shadow: 0 0 15px #2ecc71; background: rgba(46,204,113,0.1); }
+        .item-icon { font-size: 40px; }
+        .item-label { font-size: 10px; color: #aaa; margin-top: 5px; }
 
-        /* 下部：メッセージ表示 */
-        #msg-box { position: absolute; bottom: 60px; width: 100%; text-align: center; pointer-events: none; }
-        #msg-text { 
-            display: inline-block; background: rgba(0,0,0,0.85); color: #fff; padding: 18px 50px; 
-            border-top: 4px solid #27ae60; font-size: 20px; min-width: 450px; border-radius: 5px;
+        /* 下部：メッセージ */
+        #message-box { position: absolute; bottom: 50px; width: 100%; text-align: center; pointer-events: none; }
+        #message-text { 
+            display: inline-block; background: rgba(0,0,0,0.9); color: white; padding: 15px 40px; 
+            border-radius: 5px; border-bottom: 3px solid #2ecc71; font-size: 18px; min-width: 400px;
         }
 
-        /* アイテム詳細（日本語） */
-        #detail-view {
+        /* アイテム詳細（SHIFTキー） */
+        #inspect-screen {
             display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.95); z-index: 9000; flex-direction: column;
-            align-items: center; justify-content: center; color: #fff; text-align: center;
+            background: rgba(0,0,0,0.95); z-index: 2000; flex-direction: column;
+            align-items: center; justify-content: center; color: white;
         }
-        .detail-card { background: #1a1a1a; padding: 50px; border-radius: 40px; border: 1px solid #333; max-width: 500px; }
+        .inspect-card { background: #1a1a1a; padding: 50px; border: 2px solid #333; border-radius: 20px; text-align: center; max-width: 500px; }
 
-        /* 金庫テンキー（日本語） */
-        #safe-panel {
+        /* 金庫UI */
+        #numpad-ui {
             display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            background: #2c3e50; padding: 40px; border-radius: 25px; border: 4px solid #27ae60;
-            z-index: 8000; text-align: center; pointer-events: auto;
+            background: #2c3e50; padding: 30px; border-radius: 15px; border: 4px solid #95a5a6;
+            z-index: 1500; text-align: center;
         }
-        #safe-screen { font-size: 50px; width: 220px; background: #000; color: #2ecc71; border: 2px solid #1abc9c; margin-bottom: 25px; text-align: center; font-family: monospace; }
-        .pad-grid { display: grid; grid-template-columns: repeat(3, 80px); gap: 15px; justify-content: center; }
-        .pad-grid button { height: 70px; font-size: 26px; background: #34495e; color: #fff; border: 1px solid #7f8c8d; cursor: pointer; border-radius: 10px; }
-        .pad-grid button:active { background: #27ae60; }
+        #numpad-display { font-size: 40px; width: 180px; background: #000; color: #2ecc71; margin-bottom: 20px; text-align: center; border: 1px solid #7f8c8d; }
+        .numpad-grid { display: grid; grid-template-columns: repeat(3, 70px); gap: 10px; }
+        .numpad-grid button { height: 60px; font-size: 20px; cursor: pointer; background: #34495e; color: white; border: 1px solid #7f8c8d; border-radius: 5px; }
 
-        /* クリア（日本語） */
+        /* クリア画面 */
         #clear-screen {
             display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: #000; z-index: 20000; flex-direction: column; align-items: center; justify-content: center; color: #f1c40f;
+            background: #000; z-index: 20000; flex-direction: column; align-items: center; justify-content: center;
         }
     </style>
 </head>
 <body>
 
-<div id="boot-layer">
-    <h1 style="font-size: 60px; letter-spacing: 15px; margin: 0;">3 ROOMS</h1>
-    <p style="font-size: 20px; color: #bdc3c7; margin-top: 10px;">日本語完全版 - 高輝度レンダリング</p>
-    <button class="start-trigger" onclick="runGame()">ゲームを開始する</button>
-    <p style="margin-top: 20px; color: #7f8c8d;">(クリック後、自動的に画面が固定されます)</p>
+<div id="loading-overlay">
+    <h1 style="font-size: 50px; margin-bottom: 10px;">THE THREE ROOMS</h1>
+    <p>3つの部屋、3つのパズル。日本語完全版</p>
+    <button class="start-button" onclick="initGame()">ゲームを開始する</button>
 </div>
 
-<div id="gui-guide">
-    <div style="border-bottom: 1px solid #27ae60; margin-bottom: 10px; font-weight: bold; color: #2ecc71; font-size: 16px;">操作ガイド</div>
-    <div><span class="key-box">W / A / S / D</span> 移動</div>
-    <div><span class="key-box">Q / E</span> 視点回転</div>
-    <div><span class="key-box">マウス</span> 視点移動</div>
-    <div><span class="key-box">SPACE</span> 調べる / 使う</div>
-    <div><span class="key-box">TAB</span> アイテム切り替え</div>
-    <div><span class="key-box">SHIFT</span> アイテム詳細</div>
+<div id="operation-guide">
+    <div style="font-weight: bold; color: #2ecc71; margin-bottom: 5px;">【操作方法】</div>
+    <div><span class="key">W/A/S/D</span> : 移動</div>
+    <div><span class="key">Q / E</span> : 視点の回転</div>
+    <div><span class="key">SPACE</span> : 調べる / 使う</div>
+    <div><span class="key">TAB</span> : 持ち物の切り替え</div>
+    <div><span class="key">SHIFT</span> : アイテムを詳細確認</div>
 </div>
 
-<div id="inv-container">
-    <div id="slot0" class="inv-slot"><div class="inv-name">空きスロット</div></div>
-    <div id="slot1" class="inv-slot"><div class="inv-name">空きスロット</div></div>
+<div id="inventory-ui">
+    <div id="slot0" class="item-slot"><div class="item-icon"></div><div class="item-label">スロット 1</div></div>
+    <div id="slot1" class="item-slot"><div class="item-icon"></div><div class="item-label">スロット 2</div></div>
 </div>
 
-<div id="msg-box"><div id="msg-text">この部屋のどこかに鍵があるはずだ...</div></div>
+<div id="message-box"><div id="message-text">ここから脱出しなければならない。</div></div>
 
-<div id="detail-view">
-    <div class="detail-card">
-        <div id="det-icon" style="font-size: 130px; margin-bottom: 20px;"></div>
-        <h2 id="det-title" style="color: #2ecc71; font-size: 36px; margin-bottom: 15px;"></h2>
-        <p id="det-desc" style="color: #ccc; line-height: 1.8; font-size: 18px;"></p>
-        <p style="margin-top: 40px; color: #7f8c8d; font-size: 14px;">[ SHIFT ] キーで戻る</p>
+<div id="inspect-screen">
+    <div class="inspect-card">
+        <div id="ins-icon" style="font-size: 100px; margin-bottom: 20px;"></div>
+        <h2 id="ins-title" style="color: #2ecc71;">アイテム名</h2>
+        <p id="ins-desc" style="line-height: 1.6; color: #ccc;"></p>
+        <p style="margin-top: 30px; font-size: 14px; color: #666;">[ SHIFT ] キーで閉じる</p>
     </div>
 </div>
 
-<div id="safe-panel">
-    <div style="color: #fff; margin-bottom: 15px; font-size: 18px;">暗証番号を入力</div>
-    <input type="text" id="safe-screen" maxlength="3" readonly>
-    <div class="pad-grid" id="pad-root"></div>
-    <button onclick="tryUnlock()" style="width: 100%; margin-top: 25px; padding: 18px; background: #27ae60; border: none; color: #fff; font-weight: bold; font-size: 20px; cursor: pointer; border-radius: 10px;">解除実行</button>
-    <button onclick="closeSafe()" style="width: 100%; margin-top: 10px; background: none; border: none; color: #bdc3c7; cursor: pointer;">キャンセル</button>
+<div id="numpad-ui">
+    <div style="color: white; margin-bottom: 10px;">暗証番号を入力</div>
+    <input type="text" id="numpad-display" readonly>
+    <div class="numpad-grid" id="numpad-btns"></div>
+    <button onclick="checkPassword()" style="width: 100%; margin-top: 20px; padding: 10px; background: #27ae60; color: white; border: none; font-weight: bold; cursor: pointer;">決定</button>
+    <button onclick="closeSafe()" style="width: 100%; margin-top: 5px; background: none; border: none; color: #bdc3c7; cursor: pointer;">戻る</button>
 </div>
 
 <div id="clear-screen">
-    <h1 style="font-size: 90px; margin: 0;">脱出成功！</h1>
-    <p style="font-size: 24px; color: #fff; margin-bottom: 50px;">あなたはすべての謎を解き明かしました。</p>
-    <button onclick="location.reload()" style="padding: 20px 60px; background: transparent; border: 2px solid #f1c40f; color: #f1c40f; font-size: 20px; cursor: pointer;">タイトルへ戻る</button>
+    <h1 style="color: #f1c40f; font-size: 70px;">脱出成功！</h1>
+    <p style="color: white; font-size: 20px;">おめでとうございます。すべての謎を解きました。</p>
+    <button onclick="location.reload()" style="margin-top: 40px; padding: 15px 40px; background: white; border: none; font-weight: bold; cursor: pointer;">もう一度遊ぶ</button>
 </div>
 
 <script>
 let scene, camera, renderer, yaw = 0, pitch = 0;
 let keys = {};
-const state = { 
-    inv: [], sel: 0, d1: false, d2: false, 
-    hints: { chair: false }, r3: [], uiOpen: false, inspecting: false 
+const player = { inv: [], sel: 0, isUI: false, inDetail: false };
+const world = { d1: false, d2: false, chairMoved: false, puzzle: [] };
+
+const ITEM_DATA = {
+    key1: { icon: "🗝️", name: "真鍮の鍵", desc: "少し古びているが頑丈な鍵。Room1の大きな扉に対応しているようだ。" },
+    card: { icon: "💳", name: "認証カード", desc: "金庫に隠されていた磁気カード。Room2の電子錠を解除できる。" },
+    key2: { icon: "🔑", name: "黄金のマスターキー", desc: "眩しく輝く黄金の鍵。この施設から脱出するための最終的な鍵だ。" }
 };
 
-const items = {
-    key1: { icon: "🗝️", name: "真鍮の鍵", desc: "少し錆びているが、Room1の大きな扉を開けることができそうだ。" },
-    card: { icon: "💳", name: "認証カード", desc: "金庫に入っていたICカード。Room2の電子ドアを解除できる。" },
-    key2: { icon: "🔑", name: "黄金のマスターキー", desc: "まばゆい光を放つ伝説の鍵。脱出の扉を開く唯一の手段だ。" }
-};
-
-window.addEventListener('keydown', (e) => {
-    if (state.uiOpen || state.inspecting) {
+window.addEventListener('keydown', e => {
+    if (player.isUI || player.inDetail) {
         if (e.code === 'ShiftLeft' || e.code === 'ShiftRight') toggleDetail();
         return;
     }
     keys[e.code] = true;
     if (e.code === 'Space') interact();
-    if (e.code === 'Tab') { e.preventDefault(); state.sel = (state.sel + 1) % 2; updateUI(); }
+    if (e.code === 'Tab') { e.preventDefault(); player.sel = (player.sel + 1) % 2; updateUI(); }
     if (e.code === 'ShiftLeft' || e.code === 'ShiftRight') toggleDetail();
 });
-window.addEventListener('keyup', (e) => keys[e.code] = false);
+window.addEventListener('keyup', e => keys[e.code] = false);
 
-document.addEventListener('mousemove', (e) => {
+document.addEventListener('mousemove', e => {
     if (document.pointerLockElement) {
         yaw -= e.movementX * 0.0025;
         pitch -= e.movementY * 0.0025;
-        pitch = Math.max(-1.3, Math.min(1.3, pitch));
+        pitch = Math.max(-1.4, Math.min(1.4, pitch));
     }
 });
 
-function runGame() {
-    document.getElementById('boot-layer').style.display = 'none';
+function initGame() {
+    document.getElementById('loading-overlay').style.display = 'none';
     
     scene = new THREE.Scene();
     scene.background = new THREE.Color(0x111111);
@@ -168,91 +163,88 @@ function runGame() {
     renderer.shadowMap.enabled = true;
     document.body.appendChild(renderer.domElement);
 
-    // --- 明るさ強化 ---
-    const ambient = new THREE.AmbientLight(0xffffff, 1.2); // 環境光を大幅アップ
-    scene.add(ambient);
-    const sun = new THREE.DirectionalLight(0xffffff, 1.5); // 太陽光のような光
-    sun.position.set(20, 40, 20);
+    // --- 明るさ強化設定 ---
+    scene.add(new THREE.AmbientLight(0xffffff, 1.2)); // 環境全体の明るさを大幅アップ
+    const sun = new THREE.DirectionalLight(0xffffff, 1.0);
+    sun.position.set(10, 20, 10);
     sun.castShadow = true;
-    sun.shadow.mapSize.set(2048, 2048);
     scene.add(sun);
 
-    // 部屋生成 (少し明るい色に変更)
-    makeRoom(0, 0x6e4b3a);  // Room 1
-    makeRoom(22, 0x2d5a3a); // Room 2
-    makeRoom(44, 0x2c3e50); // Room 3
+    // 各部屋に照明を追加
+    [0, 22, 44].forEach(x => {
+        let p = new THREE.PointLight(0xffffff, 0.8, 20);
+        p.position.set(x, 5, 0);
+        scene.add(p);
+    });
 
-    // 家具(Room 1)
-    const desk = buildDesk(-5, -5); scene.add(desk);
-    const vase = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.45, 1, 16), new THREE.MeshStandardMaterial({color: 0x00bcd4, metalness: 0.3}));
-    vase.position.set(-5, 1.6, -5); vase.name = "vase"; vase.castShadow = true; scene.add(vase);
-    const d1 = buildDoor(8, 0x795548, "door1"); scene.add(d1);
+    // 部屋の構築
+    createRoom(0, 0x5d4037);  // 1: 茶
+    createRoom(22, 0x1b5e20); // 2: 緑
+    createRoom(44, 0x0d47a1); // 3: 紺
 
-    // 家具(Room 2)
-    const chair = buildChair(26, 4); chair.name = "chair"; scene.add(chair);
-    const safe = new THREE.Mesh(new THREE.BoxGeometry(1.4, 1.4, 1.4), new THREE.MeshStandardMaterial({color: 0x222, metalness: 0.8}));
-    safe.position.set(29, 0.7, -5); safe.name = "safe"; safe.castShadow = true; scene.add(safe);
-    const d2 = buildDoor(30, 0x111, "door2"); scene.add(d2);
+    // ギミック配置
+    const desk = new THREE.Group();
+    const dt = new THREE.Mesh(new THREE.BoxGeometry(4, 0.2, 2.5), new THREE.MeshStandardMaterial({color:0x3e2723}));
+    dt.position.y = 1.4; desk.add(dt);
+    [[-1.8,-1],[1.8,-1],[-1.8,1],[1.8,1]].forEach(p=>{
+        let l = new THREE.Mesh(new THREE.BoxGeometry(0.15,1.4,0.15), new THREE.MeshStandardMaterial({color:0x211000}));
+        l.position.set(p[0],0.7,p[1]); desk.add(l);
+    });
+    desk.position.set(-5,0,-5); scene.add(desk);
 
-    // パズル(Room 3)
-    buildNode(40, -4, 0xff5555, "red");
-    buildNode(48, 0, 0x55ccff, "blue");
-    buildNode(42, 4, 0xffcc00, "yellow");
-    const dExit = buildDoor(52, 0xf1c40f, "exitDoor"); scene.add(dExit);
+    const vase = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.4, 0.9), new THREE.MeshStandardMaterial({color: 0x0097a7}));
+    vase.position.set(-5, 1.5, -5); vase.name = "vase"; scene.add(vase);
 
-    // テンキー
-    const root = document.getElementById('pad-root');
-    for(let i=1; i<=9; i++) {
+    const door1 = new THREE.Mesh(new THREE.BoxGeometry(0.4, 6, 3), new THREE.MeshStandardMaterial({color: 0x3e2723}));
+    door1.position.set(8, 3, 0); door1.name = "door1"; scene.add(door1);
+
+    const chair = new THREE.Group();
+    const seat = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.2, 1.5), new THREE.MeshStandardMaterial({color: 0x880e4f}));
+    seat.position.y = 0.8; chair.add(seat);
+    const back = new THREE.Mesh(new THREE.BoxGeometry(1.5, 1.6, 0.2), new THREE.MeshStandardMaterial({color: 0x880e4f}));
+    back.position.set(0, 1.5, -0.6); chair.add(back);
+    chair.position.set(26, 0, 4); chair.name = "chair"; scene.add(chair);
+
+    const safe = new THREE.Mesh(new THREE.BoxGeometry(1.2, 1.2, 1.2), new THREE.MeshStandardMaterial({color: 0x263238, metalness:0.8}));
+    safe.position.set(29, 0.6, -5); safe.name = "safe"; scene.add(safe);
+
+    const door2 = new THREE.Mesh(new THREE.BoxGeometry(0.4, 6, 3), new THREE.MeshStandardMaterial({color: 0x111}));
+    door2.position.set(30, 3, 0); door2.name = "door2"; scene.add(door2);
+
+    createPillar(40, -4, 0xff1744, "red");
+    createPillar(48, 0, 0x00e5ff, "blue");
+    createPillar(44, 4, 0xffea00, "yellow");
+
+    const exit = new THREE.Mesh(new THREE.BoxGeometry(0.4, 6, 3), new THREE.MeshStandardMaterial({color: 0xffd600}));
+    exit.position.set(52, 3, 0); exit.name = "exit"; scene.add(exit);
+
+    // UI初期化
+    const btns = document.getElementById('numpad-btns');
+    for(let i=1; i<=9; i++){
         let b = document.createElement('button'); b.innerText = i;
-        b.onclick = () => document.getElementById('safe-screen').value += i;
-        root.appendChild(b);
+        b.onclick = () => document.getElementById('numpad-display').value += i;
+        btns.appendChild(b);
     }
 
     camera.position.set(0, 3, 8);
-    renderer.domElement.requestPointerLock();
-    renderer.domElement.onclick = () => { if(!state.uiOpen && !state.inspecting) renderer.domElement.requestPointerLock(); };
+    renderer.domElement.onclick = () => { if(!player.isUI && !player.inDetail) renderer.domElement.requestPointerLock(); };
     updateUI();
     animate();
 }
 
-function makeRoom(x, col) {
-    const wall = new THREE.Mesh(new THREE.BoxGeometry(16, 9, 16), new THREE.MeshStandardMaterial({color: col, side: THREE.BackSide}));
-    wall.position.set(x, 4.5, 0); wall.receiveShadow = true; scene.add(wall);
-    const floor = new THREE.Mesh(new THREE.PlaneGeometry(16, 16), new THREE.MeshStandardMaterial({color: 0x333333}));
-    floor.rotation.x = -Math.PI/2; floor.position.x = x; floor.receiveShadow = true; scene.add(floor);
+function createRoom(x, col) {
+    const box = new THREE.Mesh(new THREE.BoxGeometry(16, 9, 16), new THREE.MeshStandardMaterial({color: col, side: THREE.BackSide}));
+    box.position.set(x, 4.5, 0); scene.add(box);
+    const floor = new THREE.Mesh(new THREE.PlaneGeometry(16, 16), new THREE.MeshStandardMaterial({color: 0x222222}));
+    floor.rotation.x = -Math.PI/2; floor.position.x = x; scene.add(floor);
 }
 
-function buildDesk(x, z) {
-    const g = new THREE.Group();
-    const t = new THREE.Mesh(new THREE.BoxGeometry(4.2, 0.2, 2.6), new THREE.MeshStandardMaterial({color: 0x3e2723}));
-    t.position.y = 1.4; t.castShadow = true; g.add(t);
-    [[-1.9,-1.1],[1.9,-1.1],[-1.9,1.1],[1.9,1.1]].forEach(p => {
-        let l = new THREE.Mesh(new THREE.BoxGeometry(0.15, 1.4, 0.15), new THREE.MeshStandardMaterial({color: 0x1a0a05}));
-        l.position.set(p[0], 0.7, p[1]); l.castShadow = true; g.add(l);
-    });
-    g.position.set(x, 0, z); return g;
-}
-
-function buildChair(x, z) {
-    const g = new THREE.Group();
-    const s = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.2, 1.5), new THREE.MeshStandardMaterial({color: 0x880e4f}));
-    s.position.y = 0.8; g.add(s);
-    const b = new THREE.Mesh(new THREE.BoxGeometry(1.5, 1.6, 0.2), new THREE.MeshStandardMaterial({color: 0x880e4f}));
-    b.position.set(0, 1.6, -0.65); g.add(b);
-    g.position.set(x, 0, z); return g;
-}
-
-function buildNode(x, z, col, id) {
+function createPillar(x, z, col, id) {
     const g = new THREE.Group();
     g.add(new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.4, 3), new THREE.MeshStandardMaterial({color: 0x111})));
-    const c = new THREE.Mesh(new THREE.OctahedronGeometry(0.7), new THREE.MeshStandardMaterial({color: col, emissive: col, emissiveIntensity: 0.4}));
-    c.position.y = 3.6; c.name = "node_"+id; g.add(c);
+    const orb = new THREE.Mesh(new THREE.SphereGeometry(0.5), new THREE.MeshStandardMaterial({color: col, emissive: col, emissiveIntensity: 0.5}));
+    orb.position.y = 3.5; orb.name = "node_" + id; g.add(orb);
     g.position.set(x, 1.5, z); scene.add(g);
-}
-
-function buildDoor(x, col, name) {
-    const d = new THREE.Mesh(new THREE.BoxGeometry(0.5, 6, 3), new THREE.MeshStandardMaterial({color: col, metalness: 0.5}));
-    d.position.set(x, 3, 0); d.name = name; d.castShadow = true; return d;
 }
 
 function interact() {
@@ -261,92 +253,92 @@ function interact() {
     const hits = r.intersectObjects(scene.children, true);
     if(hits.length > 0 && hits[0].distance < 6) {
         const o = hits[0].object;
-        const activeItem = state.inv[state.sel];
+        const item = player.inv[player.sel];
 
         if(o.name === "vase") {
-            if(!state.inv.includes("key1")) { state.inv.push("key1"); updateUI(); log("『真鍮の鍵』を手に入れた。[Shift]で詳しく調べられる。"); }
+            if(!player.inv.includes("key1")) { player.inv.push("key1"); updateUI(); notify("『真鍮の鍵』を入手しました。"); }
         }
         else if(o.name === "door1") {
-            if(activeItem === "key1") { o.position.y += 8; state.d1 = true; log("扉が開いた！"); }
-            else log("鍵がかかっている。何かが必要だ。");
+            if(item === "key1") { o.position.y += 8; world.d1 = true; notify("鍵が合いました！扉が開きます。"); }
+            else notify("鍵がかかっています。");
         }
         else if(o.name === "chair" || o.parent?.name === "chair") {
             const t = (o.name === "chair") ? o : o.parent;
-            if(!state.hints.chair) { t.position.z += 2.5; state.hints.chair = true; log("椅子を動かした。座面に数字がある：『384』"); }
+            if(!world.chairMoved) { t.position.z += 2.5; world.chairMoved = true; notify("椅子を動かした。床に数字が書かれている：『384』"); }
         }
         else if(o.name === "safe") {
-            if(state.hints.chair) { state.uiOpen = true; document.getElementById('safe-panel').style.display = 'block'; document.exitPointerLock(); }
-            else log("暗証番号式の金庫だ。どこかにヒントがあるはずだ。");
+            if(world.chairMoved) { player.isUI = true; document.getElementById('numpad-ui').style.display = 'block'; document.exitPointerLock(); }
+            else notify("暗証番号が必要な金庫だ。");
         }
         else if(o.name === "door2") {
-            if(activeItem === "card") { o.position.y += 8; state.d2 = true; log("カード認証成功。扉が開いた。"); }
-            else log("電子ロックされている。認証カードが必要だ。");
+            if(item === "card") { o.position.y += 8; world.d2 = true; notify("認証に成功しました。"); }
+            else notify("電子錠だ。認証カードが必要だ。");
         }
         else if(o.name.startsWith("node_")) {
-            const c = o.name.split("_")[1]; state.r3.push(c); o.material.emissiveIntensity = 5;
-            if(state.r3.length === 3) {
-                if(state.r3.join(",") === "red,yellow,blue") { state.inv.push("key2"); updateUI(); log("パズル解明！黄金の鍵が出現した。"); }
-                else { state.r3 = []; log("順序が違うようだ...(赤→黄→青)"); }
+            const c = o.name.split("_")[1]; world.puzzle.push(c); o.material.emissiveIntensity = 5;
+            if(world.puzzle.length === 3) {
+                if(world.puzzle.join(",") === "red,yellow,blue") { player.inv.push("key2"); updateUI(); notify("パズル正解！『黄金の鍵』を入手。"); }
+                else { world.puzzle = []; notify("順序が違うようだ。(リセットされました)"); }
             }
         }
-        else if(o.name === "exitDoor") {
-            if(activeItem === "key2") { document.getElementById('clear-screen').style.display = 'flex'; document.exitPointerLock(); }
-            else log("脱出口だ。黄金の鍵があれば脱出できそうだ。");
+        else if(o.name === "exit") {
+            if(item === "key2") { document.getElementById('clear-screen').style.display = 'flex'; document.exitPointerLock(); }
+            else notify("脱出の扉だ。黄金の鍵が必要だ。");
         }
     }
 }
 
 function toggleDetail() {
-    const itemKey = state.inv[state.sel];
+    const itemKey = player.inv[player.sel];
     if(!itemKey) return;
-    state.inspecting = !state.inspecting;
-    const ui = document.getElementById('detail-view');
-    if(state.inspecting) {
+    player.inDetail = !player.inDetail;
+    const ui = document.getElementById('inspect-screen');
+    if(player.inDetail) {
         ui.style.display = 'flex';
-        document.getElementById('det-icon').innerText = items[itemKey].icon;
-        document.getElementById('det-title').innerText = items[itemKey].name;
-        document.getElementById('det-desc').innerText = items[itemKey].desc;
+        document.getElementById('ins-icon').innerText = ITEM_DATA[itemKey].icon;
+        document.getElementById('ins-title').innerText = ITEM_DATA[itemKey].name;
+        document.getElementById('ins-desc').innerText = ITEM_DATA[itemKey].desc;
     } else { ui.style.display = 'none'; }
 }
 
-function tryUnlock() {
-    if(document.getElementById('safe-screen').value === "384") {
-        state.inv.push("card"); updateUI(); log("金庫が開いた！『認証カード』を入手。"); closeSafe();
-    } else { log("番号が間違っている。"); document.getElementById('safe-screen').value = ""; }
+function checkPassword() {
+    if(document.getElementById('numpad-display').value === "384") {
+        player.inv.push("card"); updateUI(); notify("解錠！『認証カード』を入手しました。"); closeSafe();
+    } else { notify("番号が違います。"); document.getElementById('numpad-display').value = ""; }
 }
-function closeSafe() { state.uiOpen = false; document.getElementById('safe-panel').style.display = 'none'; }
-function log(t) { document.getElementById('msg-text').innerText = t; }
+function closeSafe() { player.isUI = false; document.getElementById('numpad-ui').style.display = 'none'; }
+function notify(t) { document.getElementById('message-text').innerText = t; }
 
 function updateUI() {
     for(let i=0; i<2; i++){
-        const s = document.getElementById('slot'+i);
-        const k = state.inv[i];
-        s.innerText = k ? items[k].icon : "";
-        s.className = (i === state.sel) ? "inv-slot active" : "inv-slot";
-        s.querySelector('.inv-name').innerText = k ? items[k].name : "空きスロット";
+        const slot = document.getElementById('slot'+i);
+        const itemKey = player.inv[i];
+        slot.querySelector('.item-icon').innerText = itemKey ? ITEM_DATA[itemKey].icon : "";
+        slot.querySelector('.item-label').innerText = itemKey ? ITEM_DATA[itemKey].name : "スロット " + (i+1);
+        slot.className = (i === player.sel) ? "item-slot selected" : "item-slot";
     }
 }
 
 function animate() {
-    if(!state.uiOpen && !state.inspecting) {
-        if(keys['KeyQ']) yaw += 0.045;
-        if(keys['KeyE']) yaw -= 0.045;
+    if(!player.isUI && !player.inDetail) {
+        if(keys['KeyQ']) yaw += 0.04;
+        if(keys['KeyE']) yaw -= 0.04;
         
         const move = new THREE.Vector3();
         const fwd = new THREE.Vector3(0,0,-1).applyAxisAngle(new THREE.Vector3(0,1,0), yaw);
         const rgt = new THREE.Vector3(1,0,0).applyAxisAngle(new THREE.Vector3(0,1,0), yaw);
-        if(keys['ArrowUp'] || keys['KeyW']) move.add(fwd);
-        if(keys['ArrowDown'] || keys['KeyS']) move.add(fwd.negate());
-        if(keys['ArrowLeft'] || keys['KeyA']) move.add(rgt.negate());
-        if(keys['ArrowRight'] || keys['KeyD']) move.add(rgt);
+        if(keys['KeyW'] || keys['ArrowUp']) move.add(fwd);
+        if(keys['KeyS'] || keys['ArrowDown']) move.add(fwd.negate());
+        if(keys['KeyA'] || keys['ArrowLeft']) move.add(rgt.negate());
+        if(keys['KeyD'] || keys['ArrowRight']) move.add(rgt);
 
         if(move.length() > 0) camera.position.addScaledVector(move.normalize(), 0.18);
 
-        // 壁の衝突
+        // 壁とドアの衝突判定
         camera.position.x = Math.max(-7, Math.min(51, camera.position.x));
         camera.position.z = Math.max(-7, Math.min(7, camera.position.z));
-        if(!state.d1 && camera.position.x > 7.4) camera.position.x = 7.4;
-        if(!state.d2 && camera.position.x > 29.4) camera.position.x = 29.4;
+        if(!world.d1 && camera.position.x > 7.4) camera.position.x = 7.4;
+        if(!world.d2 && camera.position.x > 29.4) camera.position.x = 29.4;
 
         camera.rotation.set(pitch, yaw, 0, 'YXZ');
     }
