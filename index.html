@@ -5,81 +5,77 @@
     <title>部屋からの脱出！</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.min.js"></script>
     <style>
-        body { margin: 0; overflow: hidden; background: #000; font-family: 'Helvetica Neue', 'Hiragino Kaku Gothic ProN', sans-serif; }
+        body { margin: 0; overflow: hidden; background: #000; font-family: 'Arial Black', sans-serif; }
         
-        /* 100%確実に反応するオーバーレイ */
+        /* 開始画面：絶対にクリックを逃さない設定 */
         #overlay { 
             position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; 
-            background: radial-gradient(circle at center, #333 0%, #000 100%); 
-            display: flex; align-items: center; justify-content: center; 
-            flex-direction: column; z-index: 9999; color: white; cursor: pointer;
+            background: #111; display: flex; align-items: center; 
+            justify-content: center; flex-direction: column; z-index: 9999; color: white; 
         }
         #start-btn { 
-            padding: 25px 80px; font-size: 32px; background: #28a745; border: none; 
-            color: white; border-radius: 60px; font-weight: bold; 
-            box-shadow: 0 10px 40px rgba(0,255,0,0.4); pointer-events: none; /* 親のクリックを優先 */
+            padding: 30px 100px; font-size: 35px; background: #28a745; border: none; 
+            color: white; cursor: pointer; border-radius: 100px; font-weight: bold; 
+            box-shadow: 0 0 50px rgba(40,167,69,0.5); transition: 0.3s;
         }
+        #start-btn:hover { background: #34ce57; transform: scale(1.1); }
+
+        /* Congratulations テロップ */
+        #clear-screen {
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.7); z-index: 10000; align-items: center; justify-content: center;
+            flex-direction: column; color: #ffd700; text-align: center; pointer-events: none;
+        }
+        .congrats-text { font-size: 80px; text-shadow: 0 0 30px #ffd700; animation: bounce 1s infinite; }
+        @keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-20px); } }
+
+        /* ゲームUI */
+        #ui { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; visibility: hidden; }
+        #inventory { position: absolute; top: 20px; left: 20px; display: flex; flex-direction: column; gap: 10px; pointer-events: auto; }
+        .slot { width: 70px; height: 70px; border: 3px solid #555; background: rgba(0,0,0,0.8); display: flex; align-items: center; justify-content: center; font-size: 40px; border-radius: 15px; }
+        .slot.selected { border-color: #00ffcc; box-shadow: 0 0 15px #00ffcc; }
+        #msg-box { position: absolute; bottom: 30px; width: 100%; text-align: center; }
+        #text { display: inline-block; background: rgba(0,0,0,0.9); color: white; padding: 20px 50px; border-radius: 50px; border: 2px solid #28a745; font-size: 22px; }
         
-        #ui { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 100; visibility: hidden; }
-        #inventory { position: absolute; top: 20px; left: 20px; display: flex; flex-direction: column; gap: 12px; pointer-events: auto; }
-        .slot { width: 75px; height: 75px; border: 3px solid rgba(255,255,255,0.2); background: rgba(0,0,0,0.7); display: flex; align-items: center; justify-content: center; font-size: 40px; border-radius: 15px; }
-        .slot.selected { border-color: #00ffcc; box-shadow: 0 0 20px #00ffcc; }
-        #msg-box { position: absolute; bottom: 40px; width: 100%; text-align: center; }
-        #text { display: inline-block; background: rgba(0,0,0,0.85); color: #fff; padding: 18px 50px; border-radius: 50px; border: 2px solid #28a745; font-size: 20px; min-width: 450px; }
-        
-        #panel { display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #1a1a1a; padding: 40px; border-radius: 30px; border: 5px solid #28a745; pointer-events: auto; text-align: center; color: white; z-index: 1000; }
-        #panel input { font-size: 35px; width: 180px; text-align: center; margin-bottom: 25px; background: #000; color: #00ffcc; border: 2px solid #28a745; border-radius: 10px; }
-        #panel button { padding: 12px 30px; cursor: pointer; background: #28a745; color: white; border: none; font-weight: bold; border-radius: 8px; }
+        #panel { display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #222; padding: 40px; border-radius: 30px; border: 5px solid #28a745; pointer-events: auto; text-align: center; color: white; }
     </style>
 </head>
 <body>
 
-<div id="overlay" onclick="startGame()">
-    <h1 style="font-size: 64px; margin-bottom: 10px;">部屋からの脱出！</h1>
-    <p style="color: #aaa; margin-bottom: 50px; font-size: 18px;">画面のどこかをクリックして開始</p>
-    <div id="start-btn">START</div>
+<div id="overlay">
+    <h1 style="font-size: 50px; margin-bottom: 30px;">部屋からの脱出！</h1>
+    <button id="start-btn" onclick="forceStart()">脱出を開始する</button>
+</div>
+
+<div id="clear-screen">
+    <div class="congrats-text">Congratulations!</div>
+    <p style="font-size: 24px; color: white;">脱出成功！あなたは全ての謎を解き明かした。</p>
 </div>
 
 <div id="ui">
     <div id="inventory"><div id="slot-0" class="slot"></div><div id="slot-1" class="slot"></div></div>
     <div id="msg-box"><div id="text">扉を開ける方法を探そう。</div></div>
     <div id="panel">
-        <h2 id="p-title">暗証番号</h2>
-        <p id="p-hint" style="color: #00ffcc; margin-bottom: 20px;"></p>
-        <input type="text" id="p-input" maxlength="4"><br>
-        <button id="p-ok">決定</button>
-        <button id="p-close" style="background:#444; margin-left:15px;">閉じる</button>
+        <h2>暗証番号入力</h2>
+        <p id="p-hint" style="color: #00ffcc;"></p>
+        <input type="text" id="p-input" style="font-size: 30px; width: 150px; text-align: center;"><br><br>
+        <button id="p-ok" style="padding: 10px 30px; background:#28a745; color:white; border:none; cursor:pointer;">決定</button>
     </div>
 </div>
 
 <script>
-    // --- Audio System ---
+    // --- Audio ---
     let audioCtx;
-    function playSound(type) {
+    function playSound(f) {
         if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        const osc = audioCtx.createOscillator();
-        const gain = audioCtx.createGain();
+        const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain();
         osc.connect(gain); gain.connect(audioCtx.destination);
-        const now = audioCtx.currentTime;
-        if(type === 'get') { 
-            osc.frequency.setValueAtTime(800, now); osc.frequency.exponentialRampToValueAtTime(1200, now + 0.1);
-            gain.gain.setValueAtTime(0.1, now); gain.gain.linearRampToValueAtTime(0, now + 0.2);
-            osc.start(); osc.stop(now + 0.2);
-        } else if(type === 'open') {
-            osc.frequency.setValueAtTime(150, now); gain.gain.linearRampToValueAtTime(0, now + 0.5);
-            osc.start(); osc.stop(now + 0.5);
-        } else if(type === 'win') {
-            [600, 800, 1000].forEach((f, i) => {
-                const o = audioCtx.createOscillator(); const g = audioCtx.createGain();
-                o.connect(g); g.connect(audioCtx.destination);
-                o.frequency.setValueAtTime(f, now + i*0.1);
-                g.gain.setValueAtTime(0.05, now + i*0.1); g.gain.linearRampToValueAtTime(0, now + i*0.1 + 0.4);
-                o.start(now + i*0.1); o.stop(now + i*0.1 + 0.4);
-            });
-        }
+        osc.frequency.setValueAtTime(f, audioCtx.currentTime);
+        gain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.3);
+        osc.start(); osc.stop(audioCtx.currentTime + 0.3);
     }
 
-    // --- Scene Setup ---
+    // --- Scene ---
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
     const renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -87,171 +83,121 @@
     renderer.shadowMap.enabled = true;
     document.body.appendChild(renderer.domElement);
 
-    const amb = new THREE.AmbientLight(0xffffff, 0.8); scene.add(amb);
-    const sun = new THREE.DirectionalLight(0xffffff, 0.8); sun.position.set(5, 15, 5); sun.castShadow = true;
-    scene.add(sun);
+    scene.add(new THREE.AmbientLight(0xffffff, 0.9));
+    const light = new THREE.DirectionalLight(0xffffff, 0.6); light.position.set(5,10,5); scene.add(light);
 
-    const state = { inv: [], sel: -1, d1: false, d2: false, hints: { chair: false, book: false, memo: false }, r3_seq: [], r3_correct: ["red", "yellow", "blue"] };
-    const items = { key1: { icon: "🗝️", name: "真鍮の鍵" }, card: { icon: "💳", name: "認証カード" }, key2: { icon: "🔑", name: "黄金の鍵" } };
+    const state = { inv: [], sel: -1, d1: false, d2: false, hints: { chair: false }, r3_seq: [], r3_correct: ["red", "yellow", "blue"] };
+    const items = { key1: "🗝️", card: "💳", key2: "🔑" };
 
     function buildRoom(x, col) {
         const g = new THREE.Group(); g.position.x = x;
         const walls = new THREE.Mesh(new THREE.BoxGeometry(16, 9, 16), new THREE.MeshStandardMaterial({ color: col, side: THREE.BackSide }));
-        walls.position.y = 4.5; walls.receiveShadow = true; g.add(walls);
+        walls.position.y = 4.5; g.add(walls);
         const floor = new THREE.Mesh(new THREE.PlaneGeometry(16, 16), new THREE.MeshStandardMaterial({ color: 0x222 }));
-        floor.rotation.x = -Math.PI/2; floor.receiveShadow = true; g.add(floor);
+        floor.rotation.x = -Math.PI/2; g.add(floor);
         scene.add(g); return g;
     }
     buildRoom(0, 0x5d4037); buildRoom(22, 0x2e7d32); buildRoom(44, 0x1a237e);
 
-    // --- Furniture ---
-    const desk = new THREE.Group();
-    const top = new THREE.Mesh(new THREE.BoxGeometry(4, 0.2, 2.5), new THREE.MeshStandardMaterial({color: 0x3e2723}));
-    top.position.y = 1.4; desk.add(top);
-    for(let x of [-1.8, 1.8]) for(let z of [-1, 1]) {
-        let l = new THREE.Mesh(new THREE.BoxGeometry(0.15, 1.4, 0.15), new THREE.MeshStandardMaterial({color: 0x21100b}));
-        l.position.set(x, 0.7, z); desk.add(l);
-    }
-    desk.position.set(-5, 0, -5); scene.add(desk);
-
-    const vase = new THREE.Group();
-    vase.add(new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.4, 0.7), new THREE.MeshStandardMaterial({color: 0x00bcd4})));
-    vase.position.set(-5, 1.5, -5); vase.name = "vase"; scene.add(vase);
+    // Props
+    const vase = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.4, 0.8), new THREE.MeshStandardMaterial({color: 0x00bcd4}));
+    vase.position.set(-5, 0.4, -5); vase.name = "vase"; scene.add(vase);
 
     const door1 = new THREE.Mesh(new THREE.BoxGeometry(0.4, 6, 3), new THREE.MeshStandardMaterial({color: 0x795548}));
     door1.position.set(8, 3, 0); door1.name = "door1"; scene.add(door1);
 
-    const chair = new THREE.Group();
-    chair.add(new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.2, 1.4), new THREE.MeshStandardMaterial({color: 0xd81b60})));
-    const back = new THREE.Mesh(new THREE.BoxGeometry(1.4, 1.4, 0.2), new THREE.MeshStandardMaterial({color: 0xd81b60}));
-    back.position.set(0, 0.7, -0.6); chair.add(back);
-    chair.position.set(26, 0.8, 4); chair.name = "chair"; scene.add(chair);
+    const chair = new THREE.Mesh(new THREE.BoxGeometry(1.5, 1.5, 1.5), new THREE.MeshStandardMaterial({color: 0xd81b60}));
+    chair.position.set(26, 0.75, 4); chair.name = "chair"; scene.add(chair);
 
-    const safe = new THREE.Mesh(new THREE.BoxGeometry(1.2, 1.2, 1.2), new THREE.MeshStandardMaterial({color: 0x444, metalness:0.9}));
-    safe.position.set(29, 1, -5); safe.name = "safe"; scene.add(safe);
+    const safe = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshStandardMaterial({color: 0x444}));
+    safe.position.set(29, 0.5, -5); safe.name = "safe"; scene.add(safe);
+
     const door2 = new THREE.Mesh(new THREE.BoxGeometry(0.4, 6, 3), new THREE.MeshStandardMaterial({color: 0x212121}));
     door2.position.set(30, 3, 0); door2.name = "door2"; scene.add(door2);
 
-    // Hints
-    const h1 = new THREE.Mesh(new THREE.CircleGeometry(0.2, 32), new THREE.MeshBasicMaterial({color: 0xff0000}));
-    h1.position.set(-7.95, 4, -2); h1.rotation.y = Math.PI/2; scene.add(h1);
-    for(let i=0; i<2; i++) {
-        let h = new THREE.Mesh(new THREE.CircleGeometry(0.15, 3), new THREE.MeshBasicMaterial({color: 0xffff00}));
-        h.position.set(19+i*0.5, 5, -7.95); scene.add(h);
-    }
-    for(let i=0; i<3; i++) {
-        let h = new THREE.Mesh(new THREE.PlaneGeometry(0.2, 0.2), new THREE.MeshBasicMaterial({color: 0x00aaff}));
-        h.position.set(14.05, 3.5+i*0.4, 2); h.rotation.y = Math.PI/2; scene.add(h);
-    }
-
     const nodes = {};
-    const createPillar = (x, z, col, id) => {
-        const g = new THREE.Group(); g.position.set(x, 0, z);
-        const crys = new THREE.Mesh(new THREE.OctahedronGeometry(0.5), new THREE.MeshStandardMaterial({color: col, emissive: col, emissiveIntensity: 0.2}));
-        crys.position.y = 3.5; crys.name = "node_" + id; 
-        g.add(new THREE.Mesh(new THREE.CylinderGeometry(0.4,0.4,3), new THREE.MeshStandardMaterial({color:0x111})).translateY(1.5), crys);
-        scene.add(g); nodes[id] = crys;
+    const createP = (x, z, col, id) => {
+        const crys = new THREE.Mesh(new THREE.OctahedronGeometry(0.5), new THREE.MeshStandardMaterial({color: col, emissive: col, emissiveIntensity: 0.5}));
+        crys.position.set(x, 3, z); crys.name = "node_" + id; scene.add(crys); nodes[id] = crys;
     };
-    createPillar(40, -4, 0xff0000, "red"); createPillar(48, 0, 0x00e5ff, "blue"); createPillar(40, 4, 0xffff00, "yellow");
+    createP(40, -4, 0xff0000, "red"); createP(48, 0, 0x00e5ff, "blue"); createP(40, 4, 0xffff00, "yellow");
 
-    const monument = new THREE.Mesh(new THREE.BoxGeometry(0.2, 3, 2), new THREE.MeshStandardMaterial({color: 0x111}));
-    monument.position.set(31, 1.5, 4); monument.name = "monument"; scene.add(monument);
-
-    const exitDoor = new THREE.Mesh(new THREE.BoxGeometry(0.4, 6, 3), new THREE.MeshStandardMaterial({color: 0xffd700, metalness: 1}));
+    const exitDoor = new THREE.Mesh(new THREE.BoxGeometry(0.4, 6, 3), new THREE.MeshStandardMaterial({color: 0xffd700}));
     exitDoor.position.set(52, 3, 0); exitDoor.name = "exitDoor"; scene.add(exitDoor);
 
-    // --- Systems ---
+    // --- Control ---
     camera.position.set(0, 3, 10);
     let yaw = 0, pitch = 0, keys = {};
 
-    function startGame() {
+    function forceStart() {
         document.getElementById('overlay').style.display = 'none';
         document.getElementById('ui').style.visibility = 'visible';
-        renderer.domElement.requestPointerLock();
-        playSound('win');
+        // ロックを試みるが、失敗しても無視してゲームループは回す
+        try { renderer.domElement.requestPointerLock(); } catch(e) {}
+        animate(); 
     }
 
     window.onkeydown = (e) => {
         keys[e.code] = true;
-        if (e.code === 'Space' && state.inv.length > 0) { 
-            state.sel=(state.sel+1)%state.inv.length; updateUI(); notify(items[state.inv[state.sel]].name + " を装備中"); 
+        if(e.code === 'Space' && state.inv.length > 0) {
+            state.sel = (state.sel + 1) % state.inv.length;
+            updateUI(); notify(state.inv[state.sel] === "key1" ? "真鍮の鍵を装備" : state.inv[state.sel] === "card" ? "認証カードを装備" : "黄金の鍵を装備");
         }
-        if (e.shiftKey) interact(true);
     };
     window.onkeyup = (e) => keys[e.code] = false;
-    document.onmousemove = (e) => { if(document.pointerLockElement){ yaw-=e.movementX*0.002; pitch-=e.movementY*0.002; pitch=Math.max(-1.4, Math.min(1.4, pitch)); } };
+    document.onmousemove = (e) => { if(document.pointerLockElement){ yaw-=e.movementX*0.003; pitch-=e.movementY*0.003; pitch=Math.max(-1.4, Math.min(1.4, pitch)); } };
 
-    function interact(isShift) {
+    function interact() {
         const ray = new THREE.Raycaster(); ray.setFromCamera(new THREE.Vector2(0,0), camera);
-        const hits = ray.intersectObjects(scene.children, true);
+        const hits = ray.intersectObjects(scene.children);
         if (hits.length > 0 && hits[0].distance < 6) {
             let o = hits[0].object;
-            if (o.parent?.name === "vase" || o.name === "vase") {
-                if(!state.inv.includes("key1")){ state.inv.push("key1"); state.sel=0; updateUI(); playSound('get'); notify("『真鍮の鍵』を入手。"); }
-            } else if (o.name === "door1") {
-                if (isShift && state.inv[state.sel]==="key1") { state.d1=true; o.position.y+=8; playSound('open'); notify("扉が開いた。"); }
-                else notify("鍵が必要だ。");
-            } else if (o.parent?.name === "chair") { 
-                o.parent.position.z += 2; state.hints.chair = true; playSound('get'); notify("椅子に『3 / I』の刻印。"); 
-            } else if (o.name === "safe") {
-                if(state.hints.chair) {
-                    showInput("金庫", "I → II → III", (val) => {
-                        if(val === "384") { state.inv.push("card"); updateUI(); playSound('win'); notify("カードを入手！"); hideInput(); }
-                        else notify("違うようだ。");
-                    });
-                } else notify("手がかりが必要だ。");
-            } else if (o.name === "door2") {
-                if (isShift && state.inv[state.sel]==="card") { state.d2=true; o.position.y+=8; playSound('open'); notify("認証。地下室へ。"); }
-                else notify("認証カードが必要だ。");
-            } else if (o.name === "monument") { notify("石碑：『色の理、数は順序なり。壁の印を数えよ。』"); }
-            else if (o.name.startsWith("node_")) {
-                const col = o.name.replace("node_", "");
-                state.r3_seq.push(col); o.material.emissiveIntensity = 4.0;
-                for(let i=0; i<state.r3_seq.length; i++) {
-                    if(state.r3_seq[i] !== state.r3_correct[i]) {
-                        state.r3_seq = []; notify("リセット。"); 
-                        Object.values(nodes).forEach(n => n.material.emissiveIntensity = 0.2); return;
+            if (o.name === "vase" && !state.inv.includes("key1")) { state.inv.push("key1"); state.sel=0; updateUI(); playSound(800); notify("鍵を入手！[Shift]で扉に使え。"); }
+            else if (o.name === "door1" && keys['ShiftLeft'] && state.inv[state.sel]==="key1") { state.d1=true; o.position.y+=8; playSound(400); }
+            else if (o.name === "chair") { o.position.z += 2; state.hints.chair=true; notify("椅子に『384』の文字。"); }
+            else if (o.name === "safe" && state.hints.chair) {
+                document.exitPointerLock(); document.getElementById('panel').style.display='block';
+                document.getElementById('p-ok').onclick = () => {
+                    if(document.getElementById('p-input').value === "384") {
+                        state.inv.push("card"); updateUI(); playSound(1000); 
+                        document.getElementById('panel').style.display='none'; renderer.domElement.requestPointerLock();
                     }
-                }
+                };
+            }
+            else if (o.name === "door2" && keys['ShiftLeft'] && state.inv[state.sel]==="card") { state.d2=true; o.position.y+=8; playSound(400); }
+            else if (o.name.startsWith("node_")) {
+                const c = o.name.replace("node_", ""); state.r3_seq.push(c);
                 if(state.r3_seq.length === 3) {
-                    if(!state.inv.includes("key2")) { state.inv.push("key2"); updateUI(); playSound('win'); notify("『黄金の鍵』を入手！"); }
+                    if(JSON.stringify(state.r3_seq) === JSON.stringify(state.r3_correct)) {
+                        state.inv.push("key2"); updateUI(); playSound(1200); notify("黄金の鍵を入手！");
+                    } else { state.r3_seq = []; notify("失敗。赤→黄→青の順だ。"); }
                 }
-            } else if (o.name === "exitDoor") {
-                if (isShift && state.inv[state.sel]==="key2") { o.position.y+=8; playSound('win'); notify("脱出成功！"); }
+            }
+            else if (o.name === "exitDoor" && keys['ShiftLeft'] && state.inv[state.sel]==="key2") {
+                o.position.y+=8; 
+                document.getElementById('clear-screen').style.display = 'flex';
+                playSound(1500);
             }
         }
     }
-    window.onmousedown = () => interact(false);
-
-    function showInput(t, h, ok) {
-        document.exitPointerLock(); document.getElementById('panel').style.display='block';
-        document.getElementById('p-title').innerText=t; document.getElementById('p-hint').innerText=h;
-        document.getElementById('p-ok').onclick = () => ok(document.getElementById('p-input').value);
-    }
-    function hideInput() { document.getElementById('panel').style.display='none'; renderer.domElement.requestPointerLock(); }
-    document.getElementById('p-close').onclick = hideInput;
+    window.onmousedown = interact;
 
     function animate() {
-        if (document.pointerLockElement) {
-            const d = new THREE.Vector3();
-            if (keys['ArrowUp'] || keys['KeyW']) d.z -= 1; if (keys['ArrowDown'] || keys['KeyS']) d.z += 1;
-            if (keys['ArrowLeft'] || keys['KeyA']) d.x -= 1; if (keys['ArrowRight'] || keys['KeyD']) d.x += 1;
-            if (d.length() > 0) { d.normalize().applyAxisAngle(new THREE.Vector3(0,1,0), yaw); camera.position.addScaledVector(d, 0.15); }
-            // Collision
-            if(camera.position.x < -7) camera.position.x = -7;
-            if(!state.d1 && camera.position.x > 7.4) camera.position.x = 7.4;
-            if(!state.d2 && camera.position.x > 29.4) camera.position.x = 29.4;
-            if(camera.position.x > 51) camera.position.x = 51;
-            if(Math.abs(camera.position.z) > 7) camera.position.z = Math.sign(camera.position.z)*7;
-        }
+        const d = new THREE.Vector3();
+        if (keys['ArrowUp'] || keys['KeyW']) d.z -= 1; if (keys['ArrowDown'] || keys['KeyS']) d.z += 1;
+        if (keys['ArrowLeft'] || keys['KeyA']) d.x -= 1; if (keys['ArrowRight'] || keys['KeyD']) d.x += 1;
+        if (d.length() > 0) { d.normalize().applyAxisAngle(new THREE.Vector3(0,1,0), yaw); camera.position.addScaledVector(d, 0.15); }
+        
+        if(!state.d1 && camera.position.x > 7) camera.position.x = 7;
+        if(!state.d2 && camera.position.x > 29) camera.position.x = 29;
+
         camera.rotation.set(pitch, yaw, 0, 'YXZ');
         renderer.render(scene, camera);
         requestAnimationFrame(animate);
     }
-    animate();
 
     function notify(t) { document.getElementById('text').innerText = t; }
-    function updateUI() { for(let i=0; i<2; i++){ const s=document.getElementById('slot-'+i); s.innerHTML=state.inv[i]?items[state.inv[i]].icon:""; s.classList.toggle('selected', i===state.sel); } }
+    function updateUI() { for(let i=0; i<2; i++){ const s=document.getElementById('slot-'+i); s.innerHTML=state.inv[i]?items[state.inv[i]]:""; s.classList.toggle('selected', i===state.sel); } }
 </script>
 </body>
 </html>
